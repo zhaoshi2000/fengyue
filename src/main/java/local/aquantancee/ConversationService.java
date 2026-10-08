@@ -1,6 +1,8 @@
 package local.aquantancee;
 
 import java.time.LocalDateTime;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,7 +35,7 @@ public class ConversationService {
         this.model = model.trim();
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(8_000);
-        factory.setReadTimeout(45_000);
+        factory.setReadTimeout(90_000);
         this.client = RestClient.builder().requestFactory(factory).build();
     }
 
@@ -43,6 +45,7 @@ public class ConversationService {
 
     private record Conversation(String id, String userId, String itemId, String title, String itemTitle, String summary,
                                 LocalDateTime createdAt, LocalDateTime updatedAt) {}
+    private record Reply(String content, String model, Integer promptTokens, Integer completionTokens, Integer totalTokens) {}
 
     private Conversation owned(String id, AuthService.User user) {
         List<Conversation> rows = jdbc.query("SELECT c.*,i.title AS item_title,i.summary FROM conversations c JOIN items i ON i.id=c.item_id WHERE c.id=? AND c.user_id=?",
@@ -81,10 +84,39 @@ public class ConversationService {
 
     public Map<String, Object> detail(String id, AuthService.User user) {
         Conversation c = owned(id, user);
-        List<Map<String, Object>> messages = jdbc.query("SELECT id,role,content,created_at FROM conversation_messages WHERE conversation_id=? ORDER BY created_at,id LIMIT 200",
-                (rs, row) -> Map.of("id", rs.getString("id"), "role", rs.getString("role"), "content", rs.getString("content"),
-                    "createdAt", rs.getObject("created_at", LocalDateTime.class).toString()), id);
+        List<Map<String, Object>> messages = jdbc.query("""
+                SELECT m.id,m.role,m.content,m.created_at,u.model,u.prompt_tokens,u.completion_tokens,u.total_tokens
+                FROM conversation_messages m LEFT JOIN conversation_message_usage u ON u.message_id=m.id
+                WHERE m.conversation_id=? ORDER BY m.created_at,m.id LIMIT 200
+                """, (rs, row) -> messageJson(rs), id);
         return Map.of("conversation", json(c), "messages", messages);
+    }
+
+    private Map<String, Object> messageJson(ResultSet rs) throws SQLException {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("id", rs.getString("id"));
+        value.put("role", rs.getString("role"));
+        value.put("content", rs.getString("content"));
+        value.put("createdAt", rs.getObject("created_at", LocalDateTime.class).toString());
+        String usedModel = rs.getString("model");
+        if (usedModel != null) {
+            value.put("model", usedModel);
+            Map<String, Object> usage = new LinkedHashMap<>();
+            Integer prompt = (Integer) rs.getObject("prompt_tokens");
+            Integer completion = (Integer) rs.getObject("completion_tokens");
+            Integer total = (Integer) rs.getObject("total_tokens");
+            if (prompt != null) usage.put("promptTokens", prompt);
+            if (completion != null) usage.put("completionTokens", completion);
+            if (total != null) usage.put("totalTokens", total);
+            if (!usage.isEmpty()) value.put("usage", usage);
+        }
+        return value;
+    }
+
+    private void saveUsage(String messageId, Reply reply) {
+        jdbc.update("DELETE FROM conversation_message_usage WHERE message_id=?", messageId);
+        jdbc.update("INSERT INTO conversation_message_usage(message_id,model,prompt_tokens,completion_tokens,total_tokens) VALUES(?,?,?,?,?)",
+                messageId, reply.model(), reply.promptTokens(), reply.completionTokens(), reply.totalTokens());
     }
 
     @Transactional
@@ -95,17 +127,20 @@ public class ConversationService {
         List<Map<String, Object>> prior = jdbc.query("SELECT role,content FROM conversation_messages WHERE conversation_id=? ORDER BY created_at DESC,id DESC LIMIT 20",
                 (rs, row) -> Map.of("role", rs.getString("role"), "content", rs.getString("content")), id);
         java.util.Collections.reverse(prior);
-        String reply = apiKey.isEmpty() ? demoReply(c, message, prior.size(), false) : modelReply(c, message, prior);
+        Reply generated = apiKey.isEmpty() ? new Reply(demoReply(c, message, prior.size(), false), "本地演示", null, null, null)
+                : modelReply(c, message, prior);
+        String reply = generated.content();
         if (reply.length() > 8000) reply = reply.substring(0, 8000);
         LocalDateTime now = LocalDateTime.now();
         String userMessageId = UUID.randomUUID().toString(), replyId = UUID.randomUUID().toString();
         jdbc.update("INSERT INTO conversation_messages(id,conversation_id,role,content,created_at) VALUES(?,?,'user',?,?)", userMessageId, id, message, now);
         jdbc.update("INSERT INTO conversation_messages(id,conversation_id,role,content,created_at) VALUES(?,?,'assistant',?,?)", replyId, id, reply, now.plusNanos(1_000_000));
+        saveUsage(replyId, generated);
         jdbc.update("UPDATE conversations SET title=IF(title='新对话',?,title),updated_at=? WHERE id=?",
                 message.length() > 28 ? message.substring(0, 28) + "…" : message, now, id);
         return Map.of("conversation", json(owned(id, user)), "messages", List.of(
             Map.of("id", userMessageId, "role", "user", "content", message, "createdAt", now.toString()),
-            Map.of("id", replyId, "role", "assistant", "content", reply, "createdAt", now.plusNanos(1_000_000).toString())));
+            Map.of("id", replyId, "role", "assistant", "content", reply, "createdAt", now.plusNanos(1_000_000).toString(), "model", generated.model())));
     }
 
     private String demoReply(Conversation c, String message, int priorCount, boolean alternate) {
@@ -119,13 +154,13 @@ public class ConversationService {
     }
 
     @SuppressWarnings("unchecked")
-    private String modelReply(Conversation c, String message, List<Map<String, Object>> prior) {
+    private Reply modelReply(Conversation c, String message, List<Map<String, Object>> prior) {
         List<Map<String, Object>> messages = new ArrayList<>();
         Map<String, Object> card = cards.get(c.itemId());
         messages.add(Map.of("role", "system", "content", "你是互动中文故事《" + c.itemTitle() + "》的叙事助手。故事简介：" + c.summary()
             + "。人物设定：" + card.get("personality") + "。场景与世界观：" + card.get("scenario")
             + "。对话示例：" + card.get("exampleDialogue")
-            + "。用生动但简洁的中文推动情节，尊重用户选择，每次回复留一个可继续互动的线索。避免露骨性内容和性暴力描写。"));
+            + "。用生动的中文推动情节，尊重用户选择，每次回复留一个可继续互动的线索。若角色卡包含任务、属性或状态系统，可用 Markdown 标题、列表、分隔线展示状态，并用 :::details 标题、内容、::: 单独一行的格式提供可折叠的背景资料。普通故事保持简洁。不要输出 HTML 或 CSS。避免露骨性内容和性暴力描写。"));
         messages.addAll(prior);
         messages.add(Map.of("role", "user", "content", message));
         try {
@@ -135,10 +170,20 @@ public class ConversationService {
             if (result != null && result.get("choices") instanceof List<?> choices && !choices.isEmpty()
                     && choices.getFirst() instanceof Map<?, ?> choice
                     && choice.get("message") instanceof Map<?, ?> response
-                    && response.get("content") instanceof String content && !content.isBlank()) return content.trim();
+                    && response.get("content") instanceof String content && !content.isBlank()) {
+                Map<?, ?> usage = result.get("usage") instanceof Map<?, ?> values ? values : Map.of();
+                String returnedModel = result.get("model") instanceof String value && !value.isBlank() ? value : model;
+                return new Reply(content.trim(), returnedModel.substring(0, Math.min(returnedModel.length(), 100)),
+                    tokens(usage.get("prompt_tokens")), tokens(usage.get("completion_tokens")), tokens(usage.get("total_tokens")));
+            }
             throw new ApiException(502, "模型没有返回可用内容");
         } catch (ApiException e) { throw e; }
         catch (Exception e) { throw new ApiException(502, "模型服务暂时不可用，请稍后重试"); }
+    }
+
+    private Integer tokens(Object value) {
+        return value instanceof Number number && number.longValue() >= 0 && number.longValue() <= Integer.MAX_VALUE
+            ? number.intValue() : null;
     }
 
     public void delete(String id, AuthService.User user) {
@@ -153,6 +198,7 @@ public class ConversationService {
         if (content.isEmpty() || content.length() > 8000) throw new ApiException(400, "消息长度须为 1–8000 字");
         int changed = jdbc.update("UPDATE conversation_messages SET content=? WHERE id=? AND conversation_id=?", content, messageId, conversationId);
         if (changed == 0) throw new ApiException(404, "消息不存在");
+        jdbc.update("DELETE FROM conversation_message_usage WHERE message_id=?", messageId);
         jdbc.update("UPDATE conversations SET updated_at=? WHERE id=?", LocalDateTime.now(), conversationId);
         return detail(conversationId, user);
     }
@@ -181,9 +227,12 @@ public class ConversationService {
             (rs, row) -> Map.of("role", rs.getString("role"), "content", rs.getString("content")), conversationId, userTime);
         java.util.Collections.reverse(prior);
         String message = String.valueOf(latestUser.getFirst().get("content"));
-        String reply = apiKey.isEmpty() ? demoReply(c, message, prior.size(), true) : modelReply(c, message, prior);
+        Reply generated = apiKey.isEmpty() ? new Reply(demoReply(c, message, prior.size(), true), "本地演示", null, null, null)
+                : modelReply(c, message, prior);
+        String reply = generated.content();
         if (reply.length() > 8000) reply = reply.substring(0, 8000);
         jdbc.update("UPDATE conversation_messages SET content=? WHERE id=? AND conversation_id=?", reply, assistant.getFirst().get("id"), conversationId);
+        saveUsage(String.valueOf(assistant.getFirst().get("id")), generated);
         jdbc.update("UPDATE conversations SET updated_at=? WHERE id=?", LocalDateTime.now(), conversationId);
         return detail(conversationId, user);
     }

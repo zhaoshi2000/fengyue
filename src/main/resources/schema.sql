@@ -106,6 +106,15 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
   CONSTRAINT fk_conversation_messages_conversation FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS conversation_message_usage (
+  message_id CHAR(36) PRIMARY KEY,
+  model VARCHAR(100) NOT NULL,
+  prompt_tokens INT NULL,
+  completion_tokens INT NULL,
+  total_tokens INT NULL,
+  CONSTRAINT fk_message_usage_message FOREIGN KEY (message_id) REFERENCES conversation_messages(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS item_cards (
   item_id VARCHAR(36) PRIMARY KEY,
   personality TEXT NOT NULL,

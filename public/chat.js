@@ -77,11 +77,20 @@ function renderMessages(messages) {
     time.textContent = message.createdAt ? new Date(message.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
     const label = document.createElement('div'); label.className = 'message-label'; label.textContent = message.role === 'user' ? '✎　我的选择' : opening ? '✦　故事序章' : '✿　剧情续写';
     const content = document.createElement('div'); content.className = 'message-content';
-    for (const paragraph of String(message.content).split(/\n\s*\n/)) {
-      if (!paragraph.trim()) continue;
-      const block = document.createElement('p'); block.textContent = paragraph; content.append(block);
-    }
+    if (message.role === 'assistant' && !String(message.id).startsWith('pending-')) RichMessage.render(message.content, content);
+    else { const block = document.createElement('p'); block.textContent = message.content; content.append(block); }
     body.append(label, name, time, content);
+    if (message.role === 'assistant' && message.model) {
+      const meta = document.createElement('div'); meta.className = 'message-model-meta';
+      const model = document.createElement('span'); model.className = 'used-model'; model.textContent = `模型 ${message.model}`; meta.append(model);
+      if (Number.isInteger(message.usage?.promptTokens)) {
+        const input = document.createElement('span'); input.textContent = `输入 ${message.usage.promptTokens.toLocaleString('zh-CN')} tokens`; meta.append(input);
+      }
+      if (Number.isInteger(message.usage?.completionTokens)) {
+        const output = document.createElement('span'); output.textContent = `输出 ${message.usage.completionTokens.toLocaleString('zh-CN')} tokens`; meta.append(output);
+      }
+      body.append(meta);
+    }
     if (!String(message.id).startsWith('pending-')) {
       const actions = document.createElement('div'); actions.className = 'message-actions';
       for (const [action, label] of [['copy', '▣ 复制'], ['edit', '✎ 编辑'], ['delete', '♲ 删除'], ...(canRegenerate && message.role === 'assistant' && message.id === latestAssistant ? [['regenerate', '↻ 重新生成']] : [])]) {

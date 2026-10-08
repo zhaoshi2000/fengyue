@@ -52,5 +52,63 @@ public class SeedData implements ApplicationRunner {
                 "用户：我先查看信封。\n角色：封蜡上有一枚陌生的花纹，似乎指向宫中的旧花园。", css,
                 "/palace-mystery-bg.png", "打开密信\n询问守夜人\n查看窗外\n前往旧花园", LocalDateTime.now());
         }
+
+        String missionId = "82e261bc-2d95-4c41-8913-e0cf2756fc04";
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM app_meta WHERE name='mission-seeded'", Integer.class) == 0) {
+            if (jdbc.queryForObject("SELECT COUNT(*) FROM items WHERE id=?", Integer.class, missionId) == 0) {
+                LocalDateTime now = LocalDateTime.now();
+                jdbc.update("INSERT INTO items(id,author_id,author,title,category,summary,icon,theme,views,likes,created_at,updated_at) VALUES(?,NULL,?,?,?,?,?,?,0,0,?,?)",
+                    missionId, "风月剧场", "【无限流】主神空间 · 多元试炼", "幻想",
+                    "醒来时，你已置身主神空间。每个世界都有任务、资源与代价；你可以决定如何结盟、探索和生存。", "◈", "indigo", now, now);
+            }
+            if (jdbc.queryForObject("SELECT COUNT(*) FROM item_cards WHERE item_id=?", Integer.class, missionId) == 0) {
+                String opening = """
+                    # 主神空间 · 初始档案
+
+                    > 白光散去，你站在一座悬浮于星海的圆形大厅。中央光幕缓缓亮起，第一场试炼正在等待选择。
+
+                    ## 轮回者状态
+                    - **身份**：新晋轮回者
+                    - **生命**：100 / 100
+                    - **积分**：0
+                    - **随行人物**：暂无
+
+                    ---
+
+                    ## 当前任务
+                    **世界：失落的观测站**
+
+                    - 主线：在日落前找到观测站的核心日志。
+                    - 奖励：基础积分 300 点。
+                    - 提示：每一次选择都会留下新的线索。
+
+                    :::details 羁绊人物
+                    尚未结识其他轮回者。你可以在任务中观察、交谈与结盟。
+                    :::
+
+                    :::details 剧情记忆
+                    这是你的第一场试炼，所有经历都会记录在当前会话中。
+                    :::
+
+                    光幕上出现两条通道：左侧通往寂静的档案室，右侧传来断续的求救声。你准备怎么做？
+                    """;
+                String css = """
+                    .scene{background:radial-gradient(circle at 55% 43%,#71d5ff55,transparent 18%),radial-gradient(circle at 55% 43%,#8272ff55,transparent 38%),linear-gradient(145deg,#080f2c,#21204d 55%,#080f28)}
+                    .scene:after{content:'◈';position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-size:32vmin;color:#a9d7ff22;text-shadow:0 0 65px #72cfff;animation:portalPulse 7s ease-in-out infinite}
+                    .scene .aura{left:35%;bottom:20%;border-color:#86caff77;box-shadow:0 0 80px #6daeff55}
+                    .card{background:linear-gradient(145deg,#0d1530,#28336a);border:1px solid #7dbaff;color:#e9f6ff;box-shadow:0 15px 45px #090e2acc}
+                    .card h2{color:#bceaff}
+                    @keyframes portalPulse{50%{opacity:.4;filter:blur(5px);transform:translate(-50%,-50%) scale(1.12)}}
+                    """;
+                jdbc.update("INSERT INTO item_cards(item_id,personality,scenario,first_message,example_dialogue,author_css,background_url,quick_replies,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                    missionId,
+                    "你是主神空间的叙事系统。记录轮回者的状态、任务、资源和人物关系；尊重玩家行动，不替玩家做决定。",
+                    "多元世界中的生存试炼。每次回复先用一段情节叙述，再按需要用 Markdown 更新状态与任务。可用 :::details 标题 和单独一行的 ::: 提供可折叠资料。状态变化必须与剧情一致，不凭空扣除积分。",
+                    opening,
+                    "用户：我走向档案室。\n系统：门后的终端还亮着，日志被分成三份。你可以先检索编号，也可以检查异常的声音。",
+                    css, "", "查看状态\n前往档案室\n寻找求救声\n询问任务规则", LocalDateTime.now());
+            }
+            jdbc.update("INSERT INTO app_meta(name,meta_value) VALUES('mission-seeded','1')");
+        }
     }
 }
