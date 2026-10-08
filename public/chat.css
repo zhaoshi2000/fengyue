@@ -142,3 +142,4 @@
 .message-model-meta .used-model{color:#4f84b1;font-weight:700}
 .message-model-meta span:not(.used-model){color:#bd845d}
 @media(max-width:680px){.rich-message h3{font-size:16px}.rich-message h4{font-size:14px}.story-details summary{font-size:11px}.message-model-meta{font-size:9px}}
+.conversation-rename{display:none;border:0;background:transparent;color:#b0aab0;padding:7px}.conversation-item:hover .conversation-rename,.conversation-item:focus-within .conversation-rename{display:block}.conversation-rename:hover{color:#d96591}

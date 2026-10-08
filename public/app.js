@@ -74,6 +74,12 @@ async function createModal() {
 function editorField(name, label, value = '', max = 4000, placeholder = '') {
   return `<label class="form-field">${label}<textarea name="${name}" maxlength="${max}" placeholder="${esc(placeholder)}">${esc(value)}</textarea></label>`;
 }
+function worldEntryRow(entry = {}) {
+  return `<div class="world-entry"><div class="world-entry-head"><strong>世界书条目</strong><label><input class="world-enabled" type="checkbox" ${entry.enabled !== false ? 'checked' : ''}> 启用</label><button type="button" data-remove-world>删除</button></div>
+    <label class="form-field">名称<input class="world-title" maxlength="80" value="${esc(entry.title || '')}" placeholder="例如：旧王朝"></label>
+    <label class="form-field">触发词（逗号分隔；留空则始终生效）<input class="world-keywords" maxlength="200" value="${esc(entry.keywords || '')}" placeholder="旧王朝，皇城"></label>
+    <label class="form-field">设定内容<textarea class="world-content" maxlength="3000" placeholder="地点、角色、规则或剧情记忆">${esc(entry.content || '')}</textarea></label></div>`;
+}
 function cardEditor(item = null) {
   if (needLogin()) return;
   state.editingItemId = item?.id || null;
@@ -84,6 +90,7 @@ function cardEditor(item = null) {
       <div class="editor-row"><label class="form-field">分区<select name="category">${state.categories.filter(x => x !== '推荐').map(x => `<option ${x === item?.category ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><label class="form-field">符号<input name="icon" maxlength="4" value="${esc(item?.icon || '✨')}"></label></div>
       ${editorField('summary', '简介', item?.summary || '', 240, '10–240 字，介绍角色卡')} </fieldset>
       <fieldset><legend>角色与剧情</legend>${editorField('personality', '人物设定', card.personality, 4000, '性格、身份、说话方式')}${editorField('scenario', '场景与世界观', card.scenario, 4000, '当前地点、关系与事件')}${editorField('firstMessage', '开场白', card.firstMessage, 3000, '新对话中的第一条角色消息')}${editorField('exampleDialogue', '示例对话', card.exampleDialogue, 4000, '帮助模型学习角色的表达方式')}${editorField('quickReplies', '快捷选项（每行一个）', card.quickReplies, 1000, '询问线索\n查看周围\n继续故事')}</fieldset>
+      <fieldset><legend>世界书</legend><p class="editor-help">设定会按触发词注入聊天上下文；留空触发词表示每轮生效。最多 30 条。</p><div id="worldEntries">${(card.worldEntries || []).map(worldEntryRow).join('')}</div><button type="button" class="world-add" id="addWorldEntry">＋ 添加设定</button></fieldset>
       <fieldset><legend>视觉样式</legend><label class="form-field">背景图片地址<input name="backgroundUrl" maxlength="500" value="${esc(card.backgroundUrl || '')}" placeholder="HTTPS 地址，或上传图片自动填写"></label><label class="form-field">上传背景图（PNG / JPEG，8 MB 内）<input name="backgroundFile" type="file" accept="image/png,image/jpeg"></label>${editorField('authorCss', '卡片 CSS', card.authorCss, 12000, '.card { border-radius: 24px; }\n.scene:after { content: "✦"; animation: float 3s infinite; }')}<p class="editor-help">可设置 .card、.sigil、.scene 和 .aura；支持渐变、伪元素与 @keyframes 动画。</p></fieldset>
       <button class="form-submit">${item ? '保存角色卡' : '发布角色卡'}</button>
     </form><aside class="editor-preview"><span>实时预览</span><iframe id="cardPreviewFrame" sandbox="" title="角色卡 CSS 预览"></iframe><small>预览在隔离的画布中运行，不影响网站其他界面。</small></aside></div>`, true);
@@ -106,6 +113,12 @@ async function doCardSave(form) {
   try {
     const values = Object.fromEntries(new FormData(form));
     const file = values.backgroundFile; delete values.backgroundFile;
+    values.worldEntries = [...form.querySelectorAll('.world-entry')].map(row => ({
+      title: row.querySelector('.world-title').value.trim(),
+      keywords: row.querySelector('.world-keywords').value.trim(),
+      content: row.querySelector('.world-content').value.trim(),
+      enabled: row.querySelector('.world-enabled').checked
+    }));
     if (file instanceof File && file.size) values.backgroundUrl = await uploadMedia(file);
     const id = state.editingItemId;
     const data = await api(id ? `/api/items/${encodeURIComponent(id)}` : '/api/items', { method: id ? 'PUT' : 'POST', body: JSON.stringify(values) });
@@ -158,6 +171,8 @@ document.addEventListener('click', event => {
   const open = target.closest('[data-open]'); if (open) return openItem(open.dataset.open);
   const editCard = target.closest('[data-edit-card]'); if (editCard) return api(`/api/items/${encodeURIComponent(editCard.dataset.editCard)}`).then(data => cardEditor(data.item)).catch(error => toast(error.message));
   if (target.closest('#newCardButton')) return cardEditor();
+  if (target.closest('#addWorldEntry')) { const root = $('#worldEntries'); if (root.children.length >= 30) return toast('世界书最多 30 条'); root.insertAdjacentHTML('beforeend', worldEntryRow()); return; }
+  if (target.closest('[data-remove-world]')) { target.closest('.world-entry').remove(); return; }
   if (target.closest('#editCardButton')) return cardEditor(state.activeItem);
   if (target.closest('#detailFavorite')) return favorite(state.activeItem.id);
   if (target.closest('#detailFollow')) return follow(state.activeItem.author);

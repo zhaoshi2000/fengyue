@@ -157,9 +157,11 @@ public class ConversationService {
     private Reply modelReply(Conversation c, String message, List<Map<String, Object>> prior) {
         List<Map<String, Object>> messages = new ArrayList<>();
         Map<String, Object> card = cards.get(c.itemId());
+        String worldContext = worldContext(card, message, prior);
         messages.add(Map.of("role", "system", "content", "你是互动中文故事《" + c.itemTitle() + "》的叙事助手。故事简介：" + c.summary()
             + "。人物设定：" + card.get("personality") + "。场景与世界观：" + card.get("scenario")
             + "。对话示例：" + card.get("exampleDialogue")
+            + (worldContext.isEmpty() ? "" : "。当前相关的世界书设定：\n" + worldContext)
             + "。用生动的中文推动情节，尊重用户选择，每次回复留一个可继续互动的线索。若角色卡包含任务、属性或状态系统，可用 Markdown 标题、列表、分隔线展示状态，并用 :::details 标题、内容、::: 单独一行的格式提供可折叠的背景资料。普通故事保持简洁。不要输出 HTML 或 CSS。避免露骨性内容和性暴力描写。"));
         messages.addAll(prior);
         messages.add(Map.of("role", "user", "content", message));
@@ -181,6 +183,30 @@ public class ConversationService {
         catch (Exception e) { throw new ApiException(502, "模型服务暂时不可用，请稍后重试"); }
     }
 
+    static String worldContext(Map<String, Object> card, String message, List<Map<String, Object>> prior) {
+        Object source = card.get("worldEntries");
+        if (!(source instanceof List<?> entries)) return "";
+        StringBuilder recent = new StringBuilder(message);
+        for (int i = Math.max(0, prior.size() - 6); i < prior.size(); i++)
+            recent.append(' ').append(prior.get(i).get("content"));
+        String haystack = recent.toString().toLowerCase(java.util.Locale.ROOT);
+        StringBuilder context = new StringBuilder();
+        for (Object item : entries) {
+            if (!(item instanceof Map<?, ?> entry) || Boolean.FALSE.equals(entry.get("enabled"))) continue;
+            String keywords = String.valueOf(entry.get("keywords"));
+            boolean active = keywords.isBlank();
+            if (!active) for (String keyword : keywords.split("[,，、\\n]")) {
+                String trigger = keyword.trim().toLowerCase(java.util.Locale.ROOT);
+                if (!trigger.isEmpty() && haystack.contains(trigger)) { active = true; break; }
+            }
+            if (!active) continue;
+            String line = "【" + entry.get("title") + "】" + entry.get("content") + "\n";
+            if (context.length() + line.length() > 6000) break;
+            context.append(line);
+        }
+        return context.toString();
+    }
+
     private Integer tokens(Object value) {
         return value instanceof Number number && number.longValue() >= 0 && number.longValue() <= Integer.MAX_VALUE
             ? number.intValue() : null;
@@ -189,6 +215,28 @@ public class ConversationService {
     public void delete(String id, AuthService.User user) {
         owned(id, user);
         jdbc.update("DELETE FROM conversations WHERE id=? AND user_id=?", id, user.id());
+    }
+
+    public Map<String, Object> rename(String id, Map<String, Object> body, AuthService.User user) {
+        owned(id, user);
+        String title = AuthService.text(body, "title").trim();
+        if (title.isEmpty() || title.length() > 80) throw new ApiException(400, "会话名称须为 1–80 字");
+        jdbc.update("UPDATE conversations SET title=?,updated_at=? WHERE id=? AND user_id=?",
+            title, LocalDateTime.now(), id, user.id());
+        return Map.of("conversation", json(owned(id, user)));
+    }
+
+    public String export(String id, AuthService.User user) {
+        Conversation conversation = owned(id, user);
+        StringBuilder output = new StringBuilder("作品：").append(conversation.itemTitle())
+            .append("\n会话：").append(conversation.title()).append("\n\n");
+        jdbc.query("SELECT role,content,created_at FROM conversation_messages WHERE conversation_id=? ORDER BY created_at,id",
+            rs -> {
+                output.append('[').append(rs.getObject("created_at", LocalDateTime.class)).append("] ")
+                    .append("user".equals(rs.getString("role")) ? "我" : conversation.itemTitle()).append("\n")
+                    .append(rs.getString("content")).append("\n\n");
+            }, id);
+        return output.toString();
     }
 
     @Transactional

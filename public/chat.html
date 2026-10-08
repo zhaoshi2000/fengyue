@@ -54,13 +54,14 @@
         </section>
         <section class="messages" id="messages" aria-live="polite" hidden></section>
       </div>
-      <footer class="composer-wrap"><div class="composer-inner"><div class="chat-tools"><button id="storyInfoButton">▣　作品详情</button><button id="scrollBottomButton">↓　回到底部</button><button id="newChatBottom">＋　新对话</button><button id="toggleIntroButton">☷　隐藏背景</button></div><div class="quick-replies" id="quickReplies" aria-label="快捷选项"></div><form id="messageForm" class="composer"><textarea id="messageInput" rows="1" maxlength="2000" placeholder="输入消息，Shift + 回车换行" aria-label="输入聊天消息"></textarea><span class="message-count" id="messageCount">0 / 2000</span><button class="send-button" id="sendButton" type="submit" aria-label="发送">➤</button></form><div class="composer-note" id="composerNote">正在检查聊天服务…</div></div></footer>
+      <footer class="composer-wrap"><div class="composer-inner"><div class="chat-tools"><button id="storyInfoButton">▣　作品详情</button><button id="scrollBottomButton">↓　回到底部</button><button id="newChatBottom">＋　新对话</button><button id="exportChatButton" title="导出当前会话">↓　导出对话</button><button id="toggleIntroButton">☷　隐藏背景</button></div><div class="quick-replies" id="quickReplies" aria-label="快捷选项"></div><form id="messageForm" class="composer"><textarea id="messageInput" rows="1" maxlength="2000" placeholder="输入消息，Shift + 回车换行" aria-label="输入聊天消息"></textarea><span class="message-count" id="messageCount">0 / 2000</span><button class="send-button" id="sendButton" type="submit" aria-label="发送">➤</button></form><div class="composer-note" id="composerNote">正在检查聊天服务…</div></div></footer>
     </main>
   </div>
 
   <dialog id="authDialog" class="chat-dialog"><button class="dialog-close" data-close-dialog aria-label="关闭">×</button><h2 id="authTitle">登录后继续聊天</h2><p>登录后可创建对话，并在这台设备的数据库中保存记录。</p><form id="authForm"><label>昵称<input id="authName" name="name" minlength="2" maxlength="24" required autocomplete="username"></label><label>密码<input id="authPassword" name="password" type="password" minlength="8" required autocomplete="current-password"></label><button class="dialog-primary" id="authSubmit">登录</button></form><button class="dialog-link" id="switchAuth">没有账号？注册</button></dialog>
   <dialog id="infoDialog" class="chat-dialog"><button class="dialog-close" data-close-dialog aria-label="关闭">×</button><h2 id="infoTitle">作品详情</h2><p id="infoText"></p><button class="dialog-primary" data-close-dialog>知道了</button></dialog>
   <dialog id="editMessageDialog" class="chat-dialog"><button class="dialog-close" data-close-dialog aria-label="关闭">×</button><h2>编辑消息</h2><form id="editMessageForm"><textarea id="editMessageInput" maxlength="8000" required></textarea><button class="dialog-primary">保存修改</button></form></dialog>
+  <dialog id="renameChatDialog" class="chat-dialog"><button class="dialog-close" data-close-dialog aria-label="关闭">×</button><h2>重命名会话</h2><form id="renameChatForm"><label>会话名称<input id="renameChatInput" maxlength="80" required></label><button class="dialog-primary">保存名称</button></form></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 </body>
 </html>

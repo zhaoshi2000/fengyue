@@ -22,10 +22,10 @@ cd D:\git\aquantancee-local
 
 - 注册、登录、退出和密码修改；密码以 BCrypt 哈希保存，会话令牌以 SHA-256 哈希保存于 MySQL，浏览器使用 `HttpOnly` Cookie。
 - 故事搜索、分区、排序和分页；登录用户可发布、编辑和删除自己的角色卡。
-- 角色卡包含人物设定、场景、开场白、示例对话、快捷选项、背景图片和作者编写的 CSS。卡片预览与聊天场景通过无脚本沙盒渲染 CSS，支持动画，不会覆盖站点的登录和导航界面。
+- 角色卡包含人物设定、场景、开场白、示例对话、快捷选项、世界书、背景图片和作者编写的 CSS。世界书支持触发词、常驻条目和启用开关，相关条目会进入模型上下文。卡片预览与聊天场景通过无脚本沙盒渲染 CSS，支持动画，不会覆盖站点的登录和导航界面。
 - 作者可以上传 PNG/JPEG 背景图（单张不超过 8 MB），文件保存在 `data/uploads/`；迁移本地项目时请同时备份这个目录和 MySQL 数据库。
 - 收藏、关注作者、浏览历史、按北京时间每日签到以及按账号保存的聊天记录。
-- 独立互动聊天页、多个会话、开场白、历史消息、快捷选项、消息复制/编辑/删除、最后一条 AI 回复重新生成，以及账号隔离；示例故事地址为 <http://localhost:3000/zh/explore/installed/6a46cbbf-a5f5-47fa-8568-44903607d0bf>。
+- 独立互动聊天页、多个会话、会话重命名与 TXT 导出、开场白、历史消息、快捷选项、消息复制/编辑/删除、最后一条 AI 回复重新生成，以及账号隔离；示例故事地址为 <http://localhost:3000/zh/explore/installed/6a46cbbf-a5f5-47fa-8568-44903607d0bf>。
 - 聊天消息按开场白、玩家选择、剧情续写使用不同的视觉样式和进场动画，并随故事主题变色；作者的场景 CSS 仍在隔离画布中运行。
 - AI 与作者开场白支持安全的 Markdown 标题、列表、引用、分隔线、代码块和可折叠资料；模型返回的输入、输出 token 数会随回复存入 MySQL 并显示在消息底部。示例玩法卡位于 <http://localhost:3000/zh/explore/installed/82e261bc-2d95-4c41-8913-e0cf2756fc04>。
 - 管理后台位于 <http://localhost:3000/admin>，可查看用户、作品、会话与消息数量，搜索用户和作品，编辑或删除作品，删除普通用户。所有管理 API 都会验证管理员身份。
@@ -54,7 +54,7 @@ cd D:\git\aquantancee-local
 | 故事 | `GET/POST /api/items`、`GET/PUT/DELETE /api/items/{id}` |
 | 背景图 | `POST /api/media`（multipart `file`）、`GET /media/{name}` |
 | 互动 | `POST /api/items/{id}/visit`、`POST /api/items/{id}/favorite`、`POST /api/follow/{author}`、`POST /api/checkin` |
-| 独立聊天 | `GET /api/chat/config`、`GET/POST /api/items/{id}/conversations`、`GET/DELETE /api/conversations/{id}`、`POST /api/conversations/{id}/messages`、`PATCH/DELETE /api/conversations/{id}/messages/{messageId}`、`POST /api/conversations/{id}/regenerate` |
+| 独立聊天 | `GET /api/chat/config`、`GET/POST /api/items/{id}/conversations`、`GET/PATCH/DELETE /api/conversations/{id}`、`GET /api/conversations/{id}/export`、`POST /api/conversations/{id}/messages`、`PATCH/DELETE /api/conversations/{id}/messages/{messageId}`、`POST /api/conversations/{id}/regenerate` |
 | 旧版聊天兼容 | `GET/POST /api/items/{id}/chat` |
 
 `GET /api/items` 支持 `q`、`category`、`sort`、`view`、`page` 和 `limit` 参数。写接口使用 JSON 请求体；需要登录的接口依靠同源 Cookie 验证。
@@ -66,3 +66,5 @@ mvn.cmd -DskipTests package
 ```
 
 已在本机 MySQL 验证角色卡发布与二次编辑、图片上传、自定义 CSS 动画、开场白、发消息、刷新恢复历史、消息编辑/重新生成/删除，以及另一账号无法读取会话。已通过配置的兼容 Chat Completions 服务验证真实模型回复，并确认消息持久化。后台管理已验证普通用户访问返回 403、管理员可检索和删除测试作品及用户。测试时创建的临时记录均已清理。
+
+本轮另验证了世界书条目保存与读取、会话重命名和 TXT 导出，并运行 `mvn test`。参考项目的功能对应关系和后续差异见 [参考项目功能清单](docs/shumeng-reference.md)。

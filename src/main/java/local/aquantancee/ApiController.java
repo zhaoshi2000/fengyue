@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -97,6 +99,17 @@ public class ApiController {
     }
     @DeleteMapping("/conversations/{id}") public Map<String, Boolean> deleteConversation(@PathVariable String id, HttpServletRequest request) {
         conversations.delete(id, auth.require(request)); return Map.of("ok", true);
+    }
+    @PatchMapping("/conversations/{id}") public Map<String, Object> renameConversation(@PathVariable String id,
+            @RequestBody Map<String, Object> body, HttpServletRequest request) {
+        return conversations.rename(id, body, auth.require(request));
+    }
+    @GetMapping(value = "/conversations/{id}/export", produces = "text/plain;charset=UTF-8")
+    public ResponseEntity<String> exportConversation(@PathVariable String id, HttpServletRequest request) {
+        String content = conversations.export(id, auth.require(request));
+        return ResponseEntity.ok().contentType(new MediaType("text", "plain", java.nio.charset.StandardCharsets.UTF_8))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=conversation-" + id + ".txt")
+            .body(content);
     }
     @PatchMapping("/conversations/{id}/messages/{messageId}") public Map<String, Object> editMessage(@PathVariable String id, @PathVariable String messageId,
             @RequestBody Map<String, Object> body, HttpServletRequest request) {

@@ -127,3 +127,14 @@ CREATE TABLE IF NOT EXISTS item_cards (
   updated_at DATETIME(3) NOT NULL,
   CONSTRAINT fk_item_cards_item FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS item_world_entries (
+  item_id VARCHAR(36) NOT NULL,
+  position SMALLINT NOT NULL,
+  title VARCHAR(80) NOT NULL,
+  keywords VARCHAR(200) NOT NULL,
+  content TEXT NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  PRIMARY KEY (item_id, position),
+  CONSTRAINT fk_world_entries_item FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

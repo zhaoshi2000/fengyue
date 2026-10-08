@@ -1,6 +1,6 @@
 const $ = selector => document.querySelector(selector);
 const storyId = decodeURIComponent(location.pathname.split('/').filter(Boolean).at(-1) || '');
-const state = { item: null, user: null, conversationId: null, conversations: [], messages: [], config: null, busy: false, authMode: 'login', editingMessageId: null };
+const state = { item: null, user: null, conversationId: null, conversations: [], messages: [], config: null, busy: false, authMode: 'login', editingMessageId: null, renamingConversationId: null };
 let toastTimer;
 
 async function api(path, options = {}) {
@@ -52,9 +52,11 @@ function renderConversations() {
     const row = document.createElement('div'); row.className = `conversation-item${conversation.id === state.conversationId ? ' active' : ''}`;
     const select = document.createElement('button'); select.className = 'conversation-select'; select.textContent = `▤　${conversation.title}`; select.title = conversation.title;
     select.addEventListener('click', () => openConversation(conversation.id));
+    const rename = document.createElement('button'); rename.className = 'conversation-rename'; rename.textContent = '✎'; rename.title = '重命名会话';
+    rename.addEventListener('click', event => { event.stopPropagation(); state.renamingConversationId = conversation.id; $('#renameChatInput').value = conversation.title; $('#renameChatDialog').showModal(); });
     const remove = document.createElement('button'); remove.className = 'conversation-delete'; remove.textContent = '×'; remove.title = '删除会话';
     remove.addEventListener('click', event => { event.stopPropagation(); deleteConversation(conversation.id); });
-    row.append(select, remove); list.append(row);
+    row.append(select, rename, remove); list.append(row);
   }
 }
 function renderMessages(messages) {
@@ -206,6 +208,16 @@ $('#editMessageForm').addEventListener('submit', async event => {
     $('#editMessageDialog').close(); renderMessages(data.messages); await loadConversations(); toast('消息已修改');
   } catch (error) { toast(error.message); }
 });
+$('#renameChatForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!state.renamingConversationId) return;
+  try {
+    await api(`/api/conversations/${encodeURIComponent(state.renamingConversationId)}`, {
+      method: 'PATCH', body: JSON.stringify({ title: $('#renameChatInput').value })
+    });
+    $('#renameChatDialog').close(); state.renamingConversationId = null; await loadConversations(); toast('会话已重命名');
+  } catch (error) { toast(error.message); }
+});
 $('#authForm').addEventListener('submit', async event => {
   event.preventDefault(); const button = $('#authSubmit'); button.disabled = true;
   try {
@@ -223,6 +235,11 @@ $('#storyInfoButton').addEventListener('click', () => showInfo(state.item?.title
 $('#archivesButton').addEventListener('click', () => showInfo('热门存档', '每个账号的会话都显示在左侧列表中。点击“新对话”可创建另一条故事线。'));
 $('#settingsButton').addEventListener('click', () => showInfo('模型设置', state.config?.mode === 'model' ? `当前模型：${state.config.model}。模型服务由本地 Spring Boot 后端调用。` : '当前为本地演示模式。设置服务器环境变量 AI_API_KEY 后重启服务即可连接兼容聊天接口；可选 AI_MODEL 和 AI_API_URL。'));
 $('#scrollBottomButton').addEventListener('click', () => $('#chatScroll').scrollTo({ top: $('#chatScroll').scrollHeight, behavior: 'smooth' }));
+$('#exportChatButton').addEventListener('click', () => {
+  if (!state.conversationId) return toast('请先选择一个会话');
+  const link = document.createElement('a'); link.href = `/api/conversations/${encodeURIComponent(state.conversationId)}/export`;
+  document.body.append(link); link.click(); link.remove();
+});
 $('#toggleIntroButton').addEventListener('click', () => { $('#intro').hidden = !$('#intro').hidden; $('#chatScroll').scrollTop = 0; });
 $('#toggleStorySide').addEventListener('click', () => { if (innerWidth < 681) $('#storySide').classList.toggle('open'); else { $('#storySide').classList.toggle('collapsed'); $('.chat-app').classList.toggle('side-collapsed'); } });
 $('#mobileMenu').addEventListener('click', () => $('#globalSide').classList.toggle('open'));
