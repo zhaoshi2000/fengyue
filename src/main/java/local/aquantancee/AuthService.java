@@ -50,10 +50,15 @@ public class AuthService {
 
     public User refresh(String id) { return findUser("SELECT * FROM users WHERE id=?", id); }
 
+    public boolean isAdmin(User user) {
+        return user != null && !jdbc.queryForList("SELECT user_id FROM admin_users WHERE user_id=?", String.class, user.id()).isEmpty();
+    }
+
     public Map<String, Object> publicUser(User user) {
         if (user == null) return null;
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", user.id()); result.put("name", user.name()); result.put("points", user.points());
+        result.put("admin", isAdmin(user));
         result.put("lastCheckin", user.lastCheckin() == null ? null : user.lastCheckin().toString());
         result.put("favorites", jdbc.queryForList("SELECT item_id FROM favorites WHERE user_id=? ORDER BY created_at DESC", String.class, user.id()));
         result.put("following", jdbc.queryForList("SELECT author FROM follows WHERE user_id=? ORDER BY created_at DESC", String.class, user.id()));

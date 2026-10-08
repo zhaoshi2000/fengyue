@@ -86,3 +86,31 @@
 @keyframes pendingGlow{50%{opacity:.45}}
 @media(max-width:680px){.scene-frame{inset:56px 0 0;height:calc(100% - 56px)}.chat-main.has-messages .messages{padding:45px 12px 130px}.chat-main.has-messages .message-body{padding:13px}.chat-main.has-messages .message.user .message-body{max-width:78%}.message-actions button{font-size:9px;padding:4px 5px}.quick-replies button{font-size:10px}.author-preview{height:160px}}
 @media(prefers-reduced-motion:reduce){.message.pending .message-content{animation:none}.quick-replies button{transition:none}.quick-replies button:hover{transform:none}}
+
+/* Story messages use a different treatment for the opening, the player's choice, and each reply. */
+.chat-main{--story-accent:#c47190;--story-light:#fff0f5;--story-ink:#493445}
+.chat-main[data-theme="violet"],.chat-main[data-theme="indigo"],.chat-main[data-theme="purple"],.chat-main[data-theme="plum"]{--story-accent:#9674ba;--story-light:#f5effb;--story-ink:#493c60}
+.chat-main[data-theme="blue"],.chat-main[data-theme="sky"],.chat-main[data-theme="cyan"]{--story-accent:#639abc;--story-light:#eaf6fc;--story-ink:#354e66}
+.chat-main[data-theme="mint"]{--story-accent:#62aa91;--story-light:#edf9f4;--story-ink:#35574d}
+.chat-main[data-theme="amber"],.chat-main[data-theme="peach"],.chat-main[data-theme="coral"]{--story-accent:#c79563;--story-light:#fff5e9;--story-ink:#63503f}
+.chat-main.has-messages .message-body{position:relative;overflow:hidden;transition:transform .25s,box-shadow .25s}
+.chat-main.has-messages .message-body:hover{transform:translateY(-2px);box-shadow:0 19px 46px #1119}
+.chat-main.has-messages .message.story-reply .message-body{border:1px solid #fffaf0;border-left:4px solid var(--story-accent);background:linear-gradient(140deg,#ffffffed,#fffaf4e8);box-shadow:0 17px 48px #10131c80}
+.chat-main.has-messages .message.story-reply .message-body:after{content:'✦';position:absolute;right:-6px;top:-18px;font-size:100px;line-height:1;color:var(--story-accent);opacity:.075;pointer-events:none}
+.chat-main.has-messages .message.opening .message-body{background:linear-gradient(145deg,#fffdf9f4,var(--story-light));border:1px solid #fff9e9;border-top:3px double var(--story-accent);border-radius:4px 18px 18px 18px}
+.chat-main.has-messages .message.user .message-body{background:linear-gradient(145deg,#f8fcffef,#eaf5ffed);border:1px solid #d9eeff;border-top:3px solid #75b7de;border-radius:16px 4px 16px 16px}
+.message-label{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--story-accent);margin-bottom:9px}
+.message.user .message-label{color:#4c91bd}
+.chat-main.has-messages .message-name{position:relative;z-index:1;color:var(--story-ink)}
+.chat-main.has-messages .message.user .message-name{color:#375775}
+.chat-main.has-messages .message-content{position:relative;z-index:1;color:var(--story-ink);font-size:14px;line-height:2;letter-spacing:.15px}
+.chat-main.has-messages .message.user .message-content{color:#3b5870;font-size:13px;line-height:1.75}
+.message-content p{white-space:pre-wrap;margin:0 0 1em}
+.message-content p:last-child{margin-bottom:0}
+.chat-main.has-messages .message.story-reply .message-content p:first-child:first-letter{font-size:1.17em;color:var(--story-accent)}
+.chat-main.has-messages .message-actions{position:relative;z-index:1;margin-top:16px}
+.chat-main.has-messages .message-avatar{border:2px solid #fff7f0;background:var(--story-light);color:var(--story-accent);animation:avatarFloat 5s ease-in-out infinite}
+.chat-main.has-messages .message.user .message-avatar{animation:none}
+@keyframes avatarFloat{50%{transform:translateY(-4px) rotate(8deg)}}
+@media(max-width:680px){.chat-main.has-messages .message.story-reply .message-body{border-left-width:3px}.chat-main.has-messages .message-content{font-size:13px}.message-label{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.chat-main.has-messages .message-avatar{animation:none}.chat-main.has-messages .message-body{transition:none}.chat-main.has-messages .message-body:hover{transform:none}}

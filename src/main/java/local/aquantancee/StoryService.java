@@ -49,7 +49,7 @@ public class StoryService {
         result.put("createdAt", item.createdAt().toString()); result.put("updatedAt", item.updatedAt().toString());
         result.put("favorite", user != null && exists("SELECT 1 FROM favorites WHERE user_id=? AND item_id=?", user.id(), item.id()));
         result.put("following", user != null && exists("SELECT 1 FROM follows WHERE user_id=? AND author=?", user.id(), item.author()));
-        result.put("editable", user != null && user.id().equals(item.authorId()));
+        result.put("editable", user != null && (user.id().equals(item.authorId()) || auth.isAdmin(user)));
         result.put("card", cards.get(item.id()));
         return result;
     }
@@ -120,7 +120,7 @@ public class StoryService {
 
     private void owner(Item item, AuthService.User user) {
         if (user == null) throw new ApiException(401, "请先登录");
-        if (!user.id().equals(item.authorId())) throw new ApiException(403, "只能修改自己发布的内容");
+        if (!user.id().equals(item.authorId()) && !auth.isAdmin(user)) throw new ApiException(403, "只能修改自己发布的内容");
     }
 
     @Transactional

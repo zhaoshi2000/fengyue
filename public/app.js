@@ -22,6 +22,7 @@ function updateProfile() {
   $('#topLogin').classList.toggle('hidden', Boolean(user));
   $('#topRegister').classList.toggle('hidden', Boolean(user));
   $('#topAvatar').classList.toggle('hidden', !user);
+  $('#adminLink').classList.toggle('hidden', !user?.admin);
   if (user) $('#topAvatar').textContent = user.name.slice(0, 1);
 }
 function renderCategories() {
@@ -179,5 +180,5 @@ document.addEventListener('input', event => { if (event.target.closest('#cardFor
 $('#searchInput').addEventListener('keydown', event => { if (event.key === 'Enter') { state.query = event.target.value.trim(); state.view = ''; loadItems(); } });
 $('#sortSelect').addEventListener('change', event => { state.sort = event.target.value; renderRanking(); loadItems(); });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
-async function init() { try { const data = await api('/api/bootstrap'); state.user = data.user; state.featured = data.featured; state.categories = data.categories; updateProfile(); renderCategories(); renderRanking(); renderFeatured(); await loadItems(); } catch (error) { toast(`服务连接失败：${error.message}`); } }
+async function init() { try { const data = await api('/api/bootstrap'); state.user = data.user; state.featured = data.featured; state.categories = data.categories; updateProfile(); renderCategories(); renderRanking(); renderFeatured(); await loadItems(); const editId = new URLSearchParams(location.search).get('edit'); if (editId && state.user?.admin) { const detail = await api(`/api/items/${encodeURIComponent(editId)}`); cardEditor(detail.item); } } catch (error) { toast(`服务连接失败：${error.message}`); } }
 init();

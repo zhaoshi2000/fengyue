@@ -17,6 +17,7 @@ function setUser(user) {
   $('#userAvatar').textContent = user ? user.name.slice(0, 1) : '访';
   $('#userPoints').textContent = user ? `积分 ${Number(user.points).toLocaleString('zh-CN')}` : '登录后保存会话';
   $('#accountButton').textContent = user ? '退出登录' : '登录 / 注册';
+  $('#chatAdminLink').hidden = !user?.admin;
   $('#composerNote').textContent = user ? (state.config?.mode === 'model' ? `正在使用 ${state.config.model}，会话自动保存` : '当前为本地演示回复，真实 AI 需配置 API Key') : '游客可阅读故事，登录后可创建和保存对话';
 }
 function setConfig(config) {
@@ -66,15 +67,21 @@ function renderMessages(messages) {
   $('.chat-main').classList.toggle('has-messages', active);
   const latestAssistant = [...messages].reverse().find(message => message.role === 'assistant')?.id;
   const canRegenerate = messages.some(message => message.role === 'user');
-  for (const message of messages) {
-    const row = document.createElement('div'); row.className = `message ${message.role === 'user' ? 'user' : 'assistant'}${String(message.id).startsWith('pending-') ? ' pending' : ''}`;
+  for (const [index, message] of messages.entries()) {
+    const opening = index === 0 && message.role === 'assistant';
+    const row = document.createElement('div'); row.className = `message ${message.role === 'user' ? 'user' : opening ? 'assistant opening' : 'assistant story-reply'}${String(message.id).startsWith('pending-') ? ' pending' : ''}`;
     const avatar = document.createElement('div'); avatar.className = 'message-avatar'; avatar.textContent = message.role === 'user' ? '我' : '✿';
     const body = document.createElement('div'); body.className = 'message-body';
     const name = document.createElement('div'); name.className = 'message-name'; name.textContent = message.role === 'user' ? (state.user?.name || '我') : state.item.title;
     const time = document.createElement('div'); time.className = 'message-time';
     time.textContent = message.createdAt ? new Date(message.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-    const content = document.createElement('div'); content.className = 'message-content'; content.textContent = message.content;
-    body.append(name, time, content);
+    const label = document.createElement('div'); label.className = 'message-label'; label.textContent = message.role === 'user' ? '✎　我的选择' : opening ? '✦　故事序章' : '✿　剧情续写';
+    const content = document.createElement('div'); content.className = 'message-content';
+    for (const paragraph of String(message.content).split(/\n\s*\n/)) {
+      if (!paragraph.trim()) continue;
+      const block = document.createElement('p'); block.textContent = paragraph; content.append(block);
+    }
+    body.append(label, name, time, content);
     if (!String(message.id).startsWith('pending-')) {
       const actions = document.createElement('div'); actions.className = 'message-actions';
       for (const [action, label] of [['copy', '▣ 复制'], ['edit', '✎ 编辑'], ['delete', '♲ 删除'], ...(canRegenerate && message.role === 'assistant' && message.id === latestAssistant ? [['regenerate', '↻ 重新生成']] : [])]) {
@@ -151,6 +158,7 @@ async function init() {
       api(`/api/items/${encodeURIComponent(storyId)}`), api('/api/me'), api('/api/chat/config')
     ]);
     state.item = itemData.item; document.title = `${state.item.title} - AI风月`;
+    $('.chat-main').dataset.theme = /^(rose|violet|blue|mint|amber|peach|indigo|purple|cyan|plum|sky|coral)$/.test(state.item.theme) ? state.item.theme : 'rose';
     $('#storyTitle').textContent = state.item.title; $('#storySummary').textContent = state.item.summary;
     $('#introTitle').textContent = `✿　${state.item.title}　✿`; $('#backgroundText').textContent = state.item.summary;
     $('#sceneFrame').srcdoc = CardEffects.sceneDoc(state.item);
