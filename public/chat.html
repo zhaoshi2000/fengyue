@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff7fa">
+  <title>互动故事 - AI风月</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/chat.css">
+  <script src="/card-effects.js" defer></script>
+  <script src="/chat.js" defer></script>
+</head>
+<body>
+  <div class="chat-app">
+    <aside class="global-side" id="globalSide">
+      <a href="/" class="chat-brand" aria-label="返回探索首页"><span>风月</span><small>AI</small></a>
+      <nav aria-label="主导航" class="global-nav">
+        <a href="/"><span>⌂</span>探索</a><a href="/#browse"><span>✎</span>创作</a>
+        <a href="/#browse"><span>🎁</span>礼包</a><a href="/#browse"><span>▣</span>充值</a>
+        <a href="/#browse"><span>▧</span>AI生图/视频</a><a href="/#browse"><span>♧</span>有奖邀请</a>
+        <a href="/#browse"><span>◎</span>签到中心</a><a href="/#browse"><span>▣</span>App下载</a>
+        <a href="/#browse"><span>♧</span>论坛</a><a class="selected" href="/"><span>▤</span>聊天</a>
+        <a href="/#browse"><span>▤</span>小说</a>
+      </nav>
+      <div class="global-foot"><div class="user-line"><span class="user-avatar" id="userAvatar">访</span><div><strong id="userName">游客</strong><small id="userPoints">登录后保存会话</small></div></div><button id="accountButton">登录 / 注册</button><div class="foot-icons"><span>◉</span><span>♧</span><span>ⓘ</span></div></div>
+    </aside>
+
+    <aside class="story-side" id="storySide">
+      <div class="story-heading"><button class="icon-control mobile-only" id="mobileMenu" aria-label="展开导航">☰</button><div><span class="small-kicker">互动故事</span><h1 id="storyTitle">正在加载故事…</h1></div></div>
+      <p id="storySummary" class="story-summary"></p>
+      <div class="story-buttons"><button id="detailsButton">作品详情</button><button id="archivesButton">▣　热门存档</button></div>
+      <div class="divider"></div>
+      <div class="side-label">会话列表 <span>⚙</span></div>
+      <button class="new-chat" id="newChat">▣　新对话</button>
+      <div id="conversationList" class="conversation-list" aria-label="我的会话"></div>
+      <div class="story-side-bottom">你的会话保存在本地 MySQL 数据库</div>
+    </aside>
+
+    <main class="chat-main">
+      <header class="chat-top"><div class="top-left"><button class="icon-control" id="toggleStorySide" title="展开或收起侧栏">☷</button><span class="model-chip" id="modelChip">加载模型状态…</span><span class="mode-tag" id="modeTag"></span></div><button class="icon-control" id="settingsButton" title="模型设置">⚙</button></header>
+      <iframe id="sceneFrame" class="scene-frame" sandbox="" aria-hidden="true" tabindex="-1" hidden></iframe>
+      <div class="chat-scroll" id="chatScroll">
+        <section class="intro" id="intro">
+          <div class="petals" aria-hidden="true"><span>✿</span><span>✦</span><span>✿</span><span>✧</span><span>✿</span></div>
+          <div class="intro-inner"><div class="intro-flower">✿</div><h2 id="introTitle">醉花台·宫廷迷局</h2><p class="intro-subtitle">在故事的转角，写下你的下一步</p><div class="intro-tags"><span>剧情 · 沉浸互动</span><span>多会话存档</span><span>自由探索</span></div><div id="authorPreview" class="author-preview" hidden><iframe id="authorPreviewFrame" sandbox="" title="作者卡片效果" tabindex="-1"></iframe></div><div class="ornament">✻　✻　✻</div>
+            <article class="intro-card intro-card--story"><span class="card-index">01 / STORY</span><h3>📖　背景故事</h3><p id="backgroundText">一场宫廷风波将你卷入权谋迷局。旧日誓言与新的盟友交织，故事从一封密信开始。</p><p>深夜的长廊灯影微晃，信封上落着一枚陌生的花纹。远处传来脚步声，你必须决定，是现在拆开它，还是先找到送信的人。</p></article>
+            <div class="ornament faded">✻　✻　✻</div>
+            <article class="intro-card intro-card--characters"><div class="character-seal" aria-hidden="true">✦</div><div class="character-copy"><span class="card-index">02 / CHARACTERS</span><h3>⚔️　故事人物</h3><p>每个角色都有自己的秘密。留意他们的话语和选择，找出值得信任的同伴。</p></div></article>
+            <div class="ornament faded">✻　✻　✻</div>
+            <article class="intro-card intro-card--guide"><span class="card-index">03 / HOW TO PLAY</span><h3>✧　由你续写</h3><p>描述想做的事、提问或与角色对话。每次选择都会把情节带向新的方向。</p><div class="guide-pills"><span>自由输入</span><span>分支剧情</span><span>多会话存档</span></div></article>
+          </div>
+        </section>
+        <section class="messages" id="messages" aria-live="polite" hidden></section>
+      </div>
+      <footer class="composer-wrap"><div class="composer-inner"><div class="chat-tools"><button id="storyInfoButton">▣　作品详情</button><button id="scrollBottomButton">↓　回到底部</button><button id="newChatBottom">＋　新对话</button><button id="toggleIntroButton">☷　隐藏背景</button></div><div class="quick-replies" id="quickReplies" aria-label="快捷选项"></div><form id="messageForm" class="composer"><textarea id="messageInput" rows="1" maxlength="2000" placeholder="输入消息，Shift + 回车换行" aria-label="输入聊天消息"></textarea><span class="message-count" id="messageCount">0 / 2000</span><button class="send-button" id="sendButton" type="submit" aria-label="发送">➤</button></form><div class="composer-note" id="composerNote">正在检查聊天服务…</div></div></footer>
+    </main>
+  </div>
+
+  <dialog id="authDialog" class="chat-dialog"><button class="dialog-close" data-close-dialog aria-label="关闭">×</button><h2 id="authTitle">登录后继续聊天</h2><p>登录后可创建对话，并在这台设备的数据库中保存记录。</p><form id="authForm"><label>昵称<input id="authName" name="name" minlength="2" maxlength="24" required autocomplete="username"></label><label>密码<input id="authPassword" name="password" type="password" minlength="8" required autocomplete="current-password"></label><button class="dialog-primary" id="authSubmit">登录</button></form><button class="dialog-link" id="switchAuth">没有账号？注册</button></dialog>
+  <dialog id="infoDialog" class="chat-dialog"><button class="dialog-close" data-close-dialog aria-label="关闭">×</button><h2 id="infoTitle">作品详情</h2><p id="infoText"></p><button class="dialog-primary" data-close-dialog>知道了</button></dialog>
+  <dialog id="editMessageDialog" class="chat-dialog"><button class="dialog-close" data-close-dialog aria-label="关闭">×</button><h2>编辑消息</h2><form id="editMessageForm"><textarea id="editMessageInput" maxlength="8000" required></textarea><button class="dialog-primary">保存修改</button></form></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

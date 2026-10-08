@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f9f8ff">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <title>探索 - AI风月</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/" aria-label="AI风月首页"><span class="brand-mark">✦</span><span>AI<span class="brand-accent">风月</span><small>本地演示</small></span></a>
+      <nav class="primary-nav" aria-label="主导航">
+        <button class="nav-item active" data-section="explore"><span>◈</span>探索</button>
+        <button class="nav-item" data-action="create"><span>✧</span>创作</button>
+        <button class="nav-item" data-action="gift"><span>◇</span>礼包</button>
+        <button class="nav-item" data-action="points"><span>✦</span>充值</button>
+        <button class="nav-item" data-action="media"><span>▣</span>AI生图/视频</button>
+        <button class="nav-item" data-action="invite"><span>♧</span>有奖邀请</button>
+        <button class="nav-item" data-action="checkin"><span>▢</span>签到中心</button>
+      </nav>
+      <div class="sidebar-group"><span class="group-label">发现更多</span>
+        <button class="nav-item" data-action="app"><span>⇩</span>App下载</button>
+        <button class="nav-item" data-action="forum"><span>☷</span>论坛</button>
+        <button class="nav-item" data-action="chat"><span>☏</span>聊天</button>
+        <button class="nav-item" data-action="novel"><span>▤</span>小说</button>
+      </div>
+      <div class="side-footer"><span class="live-dot"></span> 独立本地服务 <small>数据保存在本机</small></div>
+    </aside>
+
+    <div class="main-area">
+      <header class="topbar">
+        <button class="mobile-menu icon-button" id="menuButton" aria-label="展开菜单">☰</button>
+        <div class="breadcrumb">探索 <span>/</span> 发现精彩内容</div>
+        <div class="topbar-actions"><span class="top-note">发现你的下一段故事</span><button class="outline-button" id="topLogin">登录</button><button class="solid-button small" id="topRegister">注册</button><button class="avatar-button hidden" id="topAvatar" aria-label="我的账号"></button></div>
+      </header>
+
+      <main class="content">
+        <div class="page-grid">
+          <div class="feed-column">
+            <section class="hero" aria-label="欢迎">
+              <div class="hero-copy"><span class="eyebrow">EXPLORE YOUR WORLD</span><h1>每一次相遇，<br><em>都是新故事的开始。</em></h1><p>发现有趣的角色和故事，让灵感与想象自在生长。</p><button class="hero-button" id="heroExplore">开始探索 <span>↗</span></button></div>
+              <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="moon">✦</div><div class="art-card art-one">🌙<small>月光下的图书馆</small></div><div class="art-card art-two">🌷<small>街角的花店</small></div><div class="art-spark spark-one">✧</div><div class="art-spark spark-two">✦</div></div>
+            </section>
+
+            <section class="search-section" id="browse">
+              <div class="search-box"><span class="search-icon">⌕</span><input id="searchInput" type="search" placeholder="搜索关键词 / 作者 / 标签" autocomplete="off"><button class="search-button" id="searchButton">搜索</button></div>
+              <button class="advanced-button" id="advancedButton">☷ <span>高级筛选</span></button>
+            </section>
+            <div class="advanced-panel hidden" id="advancedPanel"><label>排序方式<select id="sortSelect"><option value="recommended">智能推荐</option><option value="latest">最近发布</option><option value="popular">最多浏览</option><option value="liked">最多收藏</option></select></label><button id="clearFilter">清空筛选</button></div>
+
+            <div class="section-head"><div><span class="section-kicker">DISCOVER</span><h2 id="feedTitle">为你推荐</h2></div><span class="section-subtitle" id="feedSubtitle">挑选一段你喜欢的故事</span></div>
+            <div class="tabs" id="categoryTabs" role="tablist"></div>
+            <div class="ranking-row" id="rankingRow"><button class="rank-button active" data-sort="recommended">推荐</button><button class="rank-button" data-sort="latest">最近发布</button><button class="rank-button" data-sort="popular">总榜</button><button class="rank-button" data-sort="liked">收藏榜</button></div>
+            <div class="card-grid" id="cardGrid" aria-live="polite"><div class="loading">正在加载内容…</div></div>
+            <button class="load-more hidden" id="loadMore">加载更多</button>
+            <div class="feed-end">— 发现更多好故事，从这里开始 —</div>
+          </div>
+
+          <aside class="right-rail">
+            <div class="profile-card" id="profileCard"><div class="profile-header"><div class="profile-avatar">✦</div><div><strong id="profileName">欢迎来到 AI风月</strong><span id="profileLevel">开启你的探索之旅</span></div></div><div class="points-row"><span>我的积分</span><strong id="profilePoints">0 <small>积分</small></strong></div><div class="profile-actions"><button data-view="following">关注</button><button data-view="history">历史</button><button data-view="favorites">收藏</button></div><div class="guest-actions" id="guestActions"><button id="sideLogin">登录</button><button id="sideRegister">注册账号</button></div><button class="logout hidden" id="logoutButton">退出登录</button></div>
+            <button class="invite-card" id="inviteCard"><span class="invite-icon">✦</span><span><strong>有奖邀请赚积分</strong><small>邀请好友，一起开启新旅程</small></span><b>↗</b></button>
+            <div class="rail-card"><div class="rail-title"><h3>官方每周推荐</h3><span>EDITOR'S PICK</span></div><div id="featuredList"></div></div>
+            <div class="rail-card checkin-card"><div class="rail-title"><h3>每日签到</h3><span>DAILY GIFT</span></div><p>每天来看看，领取 10 积分。</p><button class="checkin-button" id="sideCheckin">立即签到 <span>→</span></button></div>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="modal-close" id="modalClose" aria-label="关闭">×</button><div id="modalContent"></div></div></div>
+  <div class="toast hidden" id="toast" role="status"></div>
+  <script src="/card-effects.js" defer></script>
+  <script src="/app.js" defer></script>
+</body>
+</html>
