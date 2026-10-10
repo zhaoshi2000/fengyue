@@ -22,5 +22,9 @@ $env:JAVA_HOME = 'D:\dev\jdk-21'
 if (!(Test-Path -LiteralPath (Join-Path $env:JAVA_HOME 'bin\java.exe'))) {
   throw '未找到 Java 21，请修改 run.ps1 中的 JAVA_HOME。'
 }
+$ttsPython = Join-Path $PSScriptRoot '.venv-tts\Scripts\python.exe'
+if (Test-Path -LiteralPath $ttsPython) {
+  $env:TTS_PYTHON = $ttsPython
+}
 Push-Location $PSScriptRoot
 try { & mvn.cmd spring-boot:run } finally { Pop-Location }

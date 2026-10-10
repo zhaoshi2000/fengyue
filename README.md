@@ -27,6 +27,7 @@ cd D:\git\aquantancee-local
 - 收藏、关注作者、浏览历史、按北京时间每日签到以及按账号保存的聊天记录。
 - 独立互动聊天页、多个会话、会话重命名与 TXT 导出、开场白、历史消息、快捷选项、消息复制/编辑/删除、最后一条 AI 回复重新生成，以及账号隔离；示例故事地址为 <http://localhost:3000/zh/explore/installed/6a46cbbf-a5f5-47fa-8568-44903607d0bf>。
 - 聊天消息按开场白、玩家选择、剧情续写使用不同的视觉样式和进场动画，并随故事主题变色；作者的场景 CSS 仍在隔离画布中运行。
+- 聊天页可选择中文、粤语或台湾音色，点击 AI 消息下的“朗读”生成并播放 MP3，支持暂停、继续和停止。语音由本地后端通过 [edge-tts](https://github.com/rany2/edge-tts) 调用 Edge 在线语音服务；文字和音频不会保存到网站数据库，朗读仅限当前账号自己的 AI 消息。
 - AI 与作者开场白支持安全的 Markdown 标题、列表、引用、分隔线、代码块和可折叠资料；模型返回的输入、输出 token 数会随回复存入 MySQL 并显示在消息底部。示例玩法卡位于 <http://localhost:3000/zh/explore/installed/82e261bc-2d95-4c41-8913-e0cf2756fc04>。
 - 管理后台位于 <http://localhost:3000/admin>，可查看用户、作品、会话与消息数量，搜索用户和作品，编辑或删除作品，删除普通用户。所有管理 API 都会验证管理员身份。
 - 首页静态资源与 API 由同一 Spring Boot 服务提供，前端无须单独启动。
@@ -34,6 +35,18 @@ cd D:\git\aquantancee-local
 首次授权已有账号为管理员时，在本机 PowerShell 中运行 `./grant-admin.ps1`，按提示输入该账号昵称；也可传入 `-Name '昵称'`。脚本使用本地数据库账号授权，不会创建默认管理员密码。授权后刷新网页，首页和聊天侧栏会出现“后台管理”入口。
 
 作者在开场白中可使用 `# 标题`、`- 列表项`、`---` 等 Markdown 语法。可折叠资料写为 `:::details 标题`，随后写内容，最后用单独一行的 `:::` 结束；普通 HTML 会作为文本显示，不会执行脚本。
+
+### Edge TTS 朗读
+
+朗读需要 Python 3.10+ 和联网访问 Edge 在线语音服务。在本机首次安装：
+
+```powershell
+cd D:\git\aquantancee-local
+.\setup-edge-tts.ps1
+.\run.ps1
+```
+
+安装脚本把固定版本的 `edge-tts` 放入项目私有的 `.venv-tts`，该目录不会提交到 Git；`run.ps1` 会自动使用它。手动运行 JAR 时可设置 `TTS_PYTHON` 为这个虚拟环境的 Python 路径。该在线服务不需要 API Key，但网络服务或可用音色可能变化；它不是 Microsoft Azure Speech 的正式 API。
 
 聊天后端支持兼容 Chat Completions 的模型接口。未设置 `AI_API_KEY` 时，页面明确显示“演示模式”，回复由本地规则产生；设置密钥后后端会调用模型，并将回复保存在 MySQL。当前本地配置使用 `gpt-6-luna`，请求地址为 `http://82.157.64.38:28082/v1/chat/completions`。首次配置密钥时运行：
 
@@ -55,6 +68,7 @@ cd D:\git\aquantancee-local
 | 背景图 | `POST /api/media`（multipart `file`）、`GET /media/{name}` |
 | 互动 | `POST /api/items/{id}/visit`、`POST /api/items/{id}/favorite`、`POST /api/follow/{author}`、`POST /api/checkin` |
 | 独立聊天 | `GET /api/chat/config`、`GET/POST /api/items/{id}/conversations`、`GET/PATCH/DELETE /api/conversations/{id}`、`GET /api/conversations/{id}/export`、`POST /api/conversations/{id}/messages`、`PATCH/DELETE /api/conversations/{id}/messages/{messageId}`、`POST /api/conversations/{id}/regenerate` |
+| 语音朗读 | `GET /api/tts/voices`、`POST /api/tts/speech`（当前账号的 `conversationId`、AI `messageId` 和 `voice`，返回 MP3） |
 | 旧版聊天兼容 | `GET/POST /api/items/{id}/chat` |
 
 `GET /api/items` 支持 `q`、`category`、`sort`、`view`、`page` 和 `limit` 参数。写接口使用 JSON 请求体；需要登录的接口依靠同源 Cookie 验证。

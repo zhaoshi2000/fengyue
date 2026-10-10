@@ -9,4 +9,6 @@ node_modules/
 .env.local
 .ai-key.dpapi
 target/
+.venv-tts/
+__pycache__/
 data/uploads/

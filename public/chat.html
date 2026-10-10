@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/chat.css">
   <script src="/card-effects.js" defer></script>
   <script src="/rich-message.js" defer></script>
+  <script src="/chat-tts.js" defer></script>
   <script src="/chat.js" defer></script>
 </head>
 <body>
@@ -54,7 +55,7 @@
         </section>
         <section class="messages" id="messages" aria-live="polite" hidden></section>
       </div>
-      <footer class="composer-wrap"><div class="composer-inner"><div class="chat-tools"><button id="storyInfoButton">▣　作品详情</button><button id="scrollBottomButton">↓　回到底部</button><button id="newChatBottom">＋　新对话</button><button id="exportChatButton" title="导出当前会话">↓　导出对话</button><button id="toggleIntroButton">☷　隐藏背景</button></div><div class="quick-replies" id="quickReplies" aria-label="快捷选项"></div><form id="messageForm" class="composer"><textarea id="messageInput" rows="1" maxlength="2000" placeholder="输入消息，Shift + 回车换行" aria-label="输入聊天消息"></textarea><span class="message-count" id="messageCount">0 / 2000</span><button class="send-button" id="sendButton" type="submit" aria-label="发送">➤</button></form><div class="composer-note" id="composerNote">正在检查聊天服务…</div></div></footer>
+      <footer class="composer-wrap"><div class="composer-inner"><div class="chat-tools"><button id="storyInfoButton">▣　作品详情</button><button id="scrollBottomButton">↓　回到底部</button><button id="newChatBottom">＋　新对话</button><button id="exportChatButton" title="导出当前会话">↓　导出对话</button><button id="toggleIntroButton">☷　隐藏背景</button><label class="tts-voice-label" for="ttsVoiceSelect">🔊 Edge 音色 <select id="ttsVoiceSelect" aria-label="Edge TTS 朗读音色" disabled><option>加载中…</option></select></label><button id="ttsStopButton" type="button" hidden>■ 停止朗读</button><span id="ttsStatus" class="tts-status" role="status" aria-live="polite"></span></div><div class="quick-replies" id="quickReplies" aria-label="快捷选项"></div><form id="messageForm" class="composer"><textarea id="messageInput" rows="1" maxlength="2000" placeholder="输入消息，Shift + 回车换行" aria-label="输入聊天消息"></textarea><span class="message-count" id="messageCount">0 / 2000</span><button class="send-button" id="sendButton" type="submit" aria-label="发送">➤</button></form><div class="composer-note" id="composerNote">正在检查聊天服务…</div></div></footer>
     </main>
   </div>
 

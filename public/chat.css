@@ -143,3 +143,5 @@
 .message-model-meta span:not(.used-model){color:#bd845d}
 @media(max-width:680px){.rich-message h3{font-size:16px}.rich-message h4{font-size:14px}.story-details summary{font-size:11px}.message-model-meta{font-size:9px}}
 .conversation-rename{display:none;border:0;background:transparent;color:#b0aab0;padding:7px}.conversation-item:hover .conversation-rename,.conversation-item:focus-within .conversation-rename{display:block}.conversation-rename:hover{color:#d96591}
+.tts-voice-label{display:inline-flex;align-items:center;gap:5px;border:1px solid #efdfe8;background:#fff;border-radius:8px;padding:3px 7px;font-size:10px;color:#9b627d}.tts-voice-label select{min-width:100px;max-width:160px;border:0;background:transparent;color:#5c5062;font-size:10px;outline:none;cursor:pointer}.tts-status{align-self:center;font-size:10px;color:#9b627d}.message-actions button.tts-active{color:#ca5687;background:#fff0f5;font-weight:700}#ttsStopButton:not([hidden]){border-color:#e9b3c8;color:#b34f76}
+@media(max-width:680px){.tts-voice-label select{max-width:120px}.tts-status{width:100%;padding-left:4px}}

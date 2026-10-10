@@ -95,17 +95,19 @@ function renderMessages(messages) {
     }
     if (!String(message.id).startsWith('pending-')) {
       const actions = document.createElement('div'); actions.className = 'message-actions';
-      for (const [action, label] of [['copy', '▣ 复制'], ['edit', '✎ 编辑'], ['delete', '♲ 删除'], ...(canRegenerate && message.role === 'assistant' && message.id === latestAssistant ? [['regenerate', '↻ 重新生成']] : [])]) {
+      for (const [action, label] of [...(message.role === 'assistant' ? [['speak', '🔊 朗读']] : []), ['copy', '▣ 复制'], ['edit', '✎ 编辑'], ['delete', '♲ 删除'], ...(canRegenerate && message.role === 'assistant' && message.id === latestAssistant ? [['regenerate', '↻ 重新生成']] : [])]) {
         const button = document.createElement('button'); button.type = 'button'; button.dataset.messageAction = action; button.dataset.messageId = message.id; button.textContent = label; actions.append(button);
       }
       body.append(actions);
     }
     row.append(avatar, body); root.append(row);
   }
+  ChatTts.refresh();
   $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
 }
 async function openConversation(id) {
   try {
+    ChatTts.stop();
     const data = await api(`/api/conversations/${encodeURIComponent(id)}`);
     state.conversationId = id; renderConversations(); renderMessages(data.messages);
     if (innerWidth < 681) $('#storySide').classList.remove('open');
@@ -115,6 +117,7 @@ async function openConversation(id) {
 async function newConversation() {
   if (!requireLogin()) return;
   try {
+    ChatTts.stop();
     const data = await api(`/api/items/${encodeURIComponent(storyId)}/conversations`, { method: 'POST' });
     state.conversationId = data.conversation.id;
     const detail = await api(`/api/conversations/${encodeURIComponent(state.conversationId)}`);
@@ -126,6 +129,7 @@ async function newConversation() {
 async function deleteConversation(id) {
   if (!confirm('删除这段会话及全部消息？')) return;
   try {
+    if (state.conversationId === id) ChatTts.stop();
     await api(`/api/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (state.conversationId === id) { state.conversationId = null; renderMessages([]); }
     await loadConversations(); toast('会话已删除');
@@ -134,6 +138,7 @@ async function deleteConversation(id) {
 async function sendMessage() {
   if (state.busy || !requireLogin()) return;
   const input = $('#messageInput'); const message = input.value.trim(); if (!message) return;
+  ChatTts.stop();
   state.busy = true; $('#sendButton').disabled = true; $('#composerNote').textContent = '正在生成回复…';
   let previous = [...state.messages];
   try {
@@ -178,6 +183,7 @@ async function init() {
       $('#authorPreviewFrame').srcdoc = CardEffects.cardDoc(state.item);
     }
     renderQuickReplies();
+    ChatTts.init().catch(() => { $('#ttsStatus').textContent = '音色列表暂不可用'; });
     setConfig(config); setUser(meData.user); await loadConversations();
     const selected = new URLSearchParams(location.search).get('conversation');
     if (selected && state.conversations.some(c => c.id === selected)) await openConversation(selected);
@@ -194,10 +200,11 @@ $('#messages').addEventListener('click', async event => {
   const message = state.messages.find(x => x.id === button.dataset.messageId); if (!message || !state.conversationId) return;
   const base = `/api/conversations/${encodeURIComponent(state.conversationId)}`;
   try {
+    if (button.dataset.messageAction === 'speak') { await ChatTts.toggle(state.conversationId, message); return; }
     if (button.dataset.messageAction === 'copy') { await navigator.clipboard.writeText(message.content); toast('已复制消息'); return; }
-    if (button.dataset.messageAction === 'edit') { state.editingMessageId = message.id; $('#editMessageInput').value = message.content; $('#editMessageDialog').showModal(); return; }
-    if (button.dataset.messageAction === 'delete') { if (!confirm('删除这条消息？')) return; const data = await api(`${base}/messages/${encodeURIComponent(message.id)}`, { method: 'DELETE' }); renderMessages(data.messages); await loadConversations(); toast('消息已删除'); return; }
-    if (button.dataset.messageAction === 'regenerate') { button.disabled = true; const data = await api(`${base}/regenerate`, { method: 'POST' }); renderMessages(data.messages); await loadConversations(); toast('已重新生成回复'); }
+    if (button.dataset.messageAction === 'edit') { ChatTts.stop(); state.editingMessageId = message.id; $('#editMessageInput').value = message.content; $('#editMessageDialog').showModal(); return; }
+    if (button.dataset.messageAction === 'delete') { if (!confirm('删除这条消息？')) return; ChatTts.stop(); const data = await api(`${base}/messages/${encodeURIComponent(message.id)}`, { method: 'DELETE' }); renderMessages(data.messages); await loadConversations(); toast('消息已删除'); return; }
+    if (button.dataset.messageAction === 'regenerate') { ChatTts.stop(); button.disabled = true; const data = await api(`${base}/regenerate`, { method: 'POST' }); renderMessages(data.messages); await loadConversations(); toast('已重新生成回复'); }
   } catch (error) { toast(error.message); button.disabled = false; }
 });
 $('#editMessageForm').addEventListener('submit', async event => {
@@ -228,7 +235,7 @@ $('#authForm').addEventListener('submit', async event => {
   finally { button.disabled = false; }
 });
 $('#switchAuth').addEventListener('click', () => { $('#authDialog').close(); authDialog(state.authMode === 'login' ? 'register' : 'login'); });
-$('#accountButton').addEventListener('click', async () => { if (!state.user) return authDialog(); try { await api('/api/auth/logout', { method: 'POST' }); state.conversationId = null; setUser(null); renderMessages([]); renderConversations(); toast('已退出登录'); } catch (error) { toast(error.message); } });
+$('#accountButton').addEventListener('click', async () => { if (!state.user) return authDialog(); try { await api('/api/auth/logout', { method: 'POST' }); ChatTts.clearCache(); state.conversationId = null; setUser(null); renderMessages([]); renderConversations(); toast('已退出登录'); } catch (error) { toast(error.message); } });
 document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
 $('#detailsButton').addEventListener('click', () => showInfo(state.item?.title || '作品详情', state.item?.summary || ''));
 $('#storyInfoButton').addEventListener('click', () => showInfo(state.item?.title || '作品详情', state.item?.summary || ''));
