@@ -17,6 +17,7 @@ public class ModelCatalogService {
     private final String apiKey;
     private final String defaultModel;
     private final String modelsUrl;
+    private final List<String> extraModels;
     private final RestClient client;
     private volatile List<Model> cached;
     private volatile boolean catalogAvailable;
@@ -24,10 +25,13 @@ public class ModelCatalogService {
 
     public ModelCatalogService(@Value("${AI_API_KEY:}") String apiKey,
             @Value("${AI_API_URL:https://api.deepseek.com/chat/completions}") String apiUrl,
-            @Value("${AI_MODEL:deepseek-flash}") String defaultModel) {
+            @Value("${AI_MODEL:deepseek-flash}") String defaultModel,
+            @Value("${AI_EXTRA_MODELS:}") String extraModels) {
         this.apiKey = apiKey.trim();
         this.defaultModel = defaultModel.trim();
         this.modelsUrl = apiUrl.trim().replaceFirst("/chat/completions/?$", "/models");
+        this.extraModels = java.util.Arrays.stream(extraModels.split(","))
+            .map(String::trim).filter(id -> id.matches("[A-Za-z0-9._:-]{1,100}")).distinct().toList();
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(8_000);
         factory.setReadTimeout(15_000);
@@ -70,6 +74,10 @@ public class ModelCatalogService {
                 if (!(entry instanceof Map<?, ?> value) || !(value.get("id") instanceof String id)
                         || !id.matches("[A-Za-z0-9._:-]{1,100}")) continue;
                 models.add(new Model(id, typeOf(id)));
+            }
+            for (String id : extraModels) {
+                if (models.stream().noneMatch(model -> model.id().equals(id)))
+                    models.add(new Model(id, typeOf(id)));
             }
             if (models.stream().noneMatch(model -> model.id().equals(defaultModel)))
                 models.add(new Model(defaultModel, "chat"));

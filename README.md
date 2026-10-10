@@ -55,7 +55,7 @@ cd D:\git\aquantancee-local
 .\run.ps1
 ```
 
-密钥保存在 Git 忽略的 `.ai-key.dpapi` 中，由当前 Windows 用户的 DPAPI 加密；`run.ps1` 启动时将其加载到进程环境变量。该文件只能在同一 Windows 用户环境中解密，迁移电脑时需重新运行 `set-ai-key.ps1`。更换服务时可在 `.env.local` 中修改 `AI_API_URL`（填写完整的 `/v1/chat/completions` 地址）和 `AI_MODEL`。若模型接口使用 HTTP，密钥传输未加密；正式使用建议改用 HTTPS 地址。模型余额不足、密钥无权限或连接超时时，聊天页会显示错误并保留输入内容。生图、支付、邀请奖励与 App 下载需要相应的外部服务。旧版 SQLite 文件仍保存在 `data/` 作为备份；切换时该文件中没有注册用户或聊天记录。
+密钥保存在 Git 忽略的 `.ai-key.dpapi` 中，由当前 Windows 用户的 DPAPI 加密；`run.ps1` 启动时将其加载到进程环境变量。该文件只能在同一 Windows 用户环境中解密，迁移电脑时需重新运行 `set-ai-key.ps1`。更换服务时可在 `.env.local` 中修改 `AI_API_URL`（填写完整的 `/v1/chat/completions` 地址）和 `AI_MODEL`。若有已验证可调用却未出现在 `/v1/models` 的别名，可通过逗号分隔的 `AI_EXTRA_MODELS` 加入列表。若模型接口使用 HTTP，密钥传输未加密；正式使用建议改用 HTTPS 地址。模型余额不足、密钥无权限或连接超时时，聊天页会显示错误并保留输入内容。生图、支付、邀请奖励与 App 下载需要相应的外部服务。旧版 SQLite 文件仍保存在 `data/` 作为备份；切换时该文件中没有注册用户或聊天记录。
 
 ## API
 
