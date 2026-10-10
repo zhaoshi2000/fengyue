@@ -87,6 +87,8 @@
 @media(max-width:680px){.scene-frame{inset:56px 0 0;height:calc(100% - 56px)}.chat-main.has-messages .messages{padding:45px 12px 130px}.chat-main.has-messages .message-body{padding:13px}.chat-main.has-messages .message.user .message-body{max-width:78%}.message-actions button{font-size:9px;padding:4px 5px}.quick-replies button{font-size:10px}.author-preview{height:160px}}
 @media(prefers-reduced-motion:reduce){.message.pending .message-content{animation:none}.quick-replies button{transition:none}.quick-replies button:hover{transform:none}}
 
+.composer-note.error{color:#b13d51;font-weight:700;background:#fff1f3;border:1px solid #f2c5ce;border-radius:8px;padding:7px 10px;text-align:left}
+
 /* Story messages use a different treatment for the opening, the player's choice, and each reply. */
 .chat-main{--story-accent:#c47190;--story-light:#fff0f5;--story-ink:#493445}
 .chat-main[data-theme="violet"],.chat-main[data-theme="indigo"],.chat-main[data-theme="purple"],.chat-main[data-theme="plum"]{--story-accent:#9674ba;--story-light:#f5effb;--story-ink:#493c60}

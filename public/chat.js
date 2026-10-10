@@ -1,6 +1,6 @@
 const $ = selector => document.querySelector(selector);
 const storyId = decodeURIComponent(location.pathname.split('/').filter(Boolean).at(-1) || '');
-const state = { item: null, user: null, conversationId: null, conversations: [], messages: [], config: null, busy: false, authMode: 'login', editingMessageId: null, renamingConversationId: null };
+const state = { item: null, user: null, conversationId: null, conversations: [], messages: [], config: null, busy: false, chatError: '', authMode: 'login', editingMessageId: null, renamingConversationId: null };
 let toastTimer;
 
 async function api(path, options = {}) {
@@ -18,12 +18,14 @@ function setUser(user) {
   $('#userPoints').textContent = user ? `积分 ${Number(user.points).toLocaleString('zh-CN')}` : '登录后保存会话';
   $('#accountButton').textContent = user ? '退出登录' : '登录 / 注册';
   $('#chatAdminLink').hidden = !user?.admin;
-  $('#composerNote').textContent = user ? (state.config?.mode === 'model' ? `正在使用 ${state.config.model}，会话自动保存` : '当前为本地演示回复，真实 AI 需配置 API Key') : '游客可阅读故事，登录后可创建和保存对话';
+  const note = $('#composerNote');
+  note.textContent = state.chatError || (user ? (state.config?.mode === 'model' ? `已配置 ${state.config.model}，会话自动保存` : '当前为本地演示回复，真实 AI 需配置 API Key') : '游客可阅读故事，登录后可创建和保存对话');
+  note.classList.toggle('error', Boolean(state.chatError));
 }
 function setConfig(config) {
   state.config = config;
   $('#modelChip').textContent = config.model;
-  $('#modeTag').textContent = config.mode === 'model' ? 'AI 已连接' : '演示模式';
+  $('#modeTag').textContent = config.mode === 'model' ? 'AI 已配置' : '演示模式';
   $('#modeTag').classList.toggle('model', config.mode === 'model');
   setUser(state.user);
 }
@@ -139,7 +141,7 @@ async function sendMessage() {
   if (state.busy || !requireLogin()) return;
   const input = $('#messageInput'); const message = input.value.trim(); if (!message) return;
   ChatTts.stop();
-  state.busy = true; $('#sendButton').disabled = true; $('#composerNote').textContent = '正在生成回复…';
+  state.busy = true; state.chatError = ''; $('#sendButton').disabled = true; $('#composerNote').classList.remove('error'); $('#composerNote').textContent = '正在生成回复…';
   let previous = [...state.messages];
   try {
     if (!state.conversationId) {
@@ -151,11 +153,14 @@ async function sendMessage() {
     renderMessages([...previous,
       { id: 'pending-user', role: 'user', content: message, createdAt: new Date().toISOString() },
       { id: 'pending-assistant', role: 'assistant', content: '正在续写故事…', createdAt: new Date().toISOString() }]);
-    await api(`/api/conversations/${encodeURIComponent(state.conversationId)}/messages`, { method: 'POST', body: JSON.stringify({ message }) });
-    input.value = ''; updateCount();
-    const detail = await api(`/api/conversations/${encodeURIComponent(state.conversationId)}`);
-    renderMessages(detail.messages); await loadConversations();
-  } catch (error) { renderMessages(previous); toast(error.message); }
+    const sent = await api(`/api/conversations/${encodeURIComponent(state.conversationId)}/messages`, { method: 'POST', body: JSON.stringify({ message }) });
+    state.chatError = ''; input.value = ''; updateCount();
+    renderMessages([...previous, ...sent.messages]);
+    try {
+      const detail = await api(`/api/conversations/${encodeURIComponent(state.conversationId)}`);
+      renderMessages(detail.messages); await loadConversations();
+    } catch (error) { toast(`回复已生成，但会话刷新失败：${error.message}`); }
+  } catch (error) { renderMessages(previous); state.chatError = `${error.message}。输入内容已保留，刷新会话确认后可重试。`; toast(error.message); }
   finally { state.busy = false; $('#sendButton').disabled = false; setUser(state.user); input.focus(); }
 }
 function updateCount() { const input = $('#messageInput'); $('#messageCount').textContent = `${input.value.length} / 2000`; input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 140)}px`; }

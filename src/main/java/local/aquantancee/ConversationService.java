@@ -14,6 +14,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.ResourceAccessException;
 
 @Service
 public class ConversationService {
@@ -180,7 +182,18 @@ public class ConversationService {
             }
             throw new ApiException(502, "模型没有返回可用内容");
         } catch (ApiException e) { throw e; }
-        catch (Exception e) { throw new ApiException(502, "模型服务暂时不可用，请稍后重试"); }
+        catch (RestClientResponseException e) {
+            String response = e.getResponseBodyAsString();
+            if (e.getStatusCode().value() == 403 && response.contains("INSUFFICIENT_BALANCE"))
+                throw new ApiException(503, "模型账号余额不足，请充值或更换可用密钥后重试");
+            if (e.getStatusCode().value() == 401 || e.getStatusCode().value() == 403)
+                throw new ApiException(502, "模型密钥无效或没有调用权限，请检查模型配置");
+            if (e.getStatusCode().value() == 429)
+                throw new ApiException(503, "模型请求过于频繁，请稍后重试");
+            throw new ApiException(502, "模型服务暂时不可用，请稍后重试");
+        } catch (ResourceAccessException e) {
+            throw new ApiException(504, "模型服务连接超时，请稍后重试");
+        } catch (Exception e) { throw new ApiException(502, "模型服务暂时不可用，请稍后重试"); }
     }
 
     static String worldContext(Map<String, Object> card, String message, List<Map<String, Object>> prior) {
