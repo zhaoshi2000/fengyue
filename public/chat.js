@@ -1,6 +1,6 @@
 const $ = selector => document.querySelector(selector);
 const storyId = decodeURIComponent(location.pathname.split('/').filter(Boolean).at(-1) || '');
-const state = { item: null, user: null, conversationId: null, conversations: [], messages: [], config: null, busy: false, chatError: '', authMode: 'login', editingMessageId: null, renamingConversationId: null };
+const state = { item: null, user: null, conversationId: null, conversations: [], messages: [], config: null, models: [], selectedModel: '', busy: false, chatError: '', authMode: 'login', editingMessageId: null, renamingConversationId: null };
 let toastTimer;
 
 async function api(path, options = {}) {
@@ -24,10 +24,42 @@ function setUser(user) {
 }
 function setConfig(config) {
   state.config = config;
-  $('#modelChip').textContent = config.model;
+  $('#modelChip').textContent = state.selectedModel || config.model;
   $('#modeTag').textContent = config.mode === 'model' ? 'AI 已配置' : '演示模式';
   $('#modeTag').classList.toggle('model', config.mode === 'model');
   setUser(state.user);
+}
+function renderModelList() {
+  const root = $('#modelList'); root.replaceChildren();
+  const query = $('#modelSearch').value.trim().toLowerCase();
+  const groups = [['chat', '文字聊天模型'], ['image', '图像模型 · 仅展示'], ['audio', '音频模型 · 仅展示'], ['other', '其他模型 · 仅展示']];
+  for (const [type, title] of groups) {
+    const models = state.models.filter(item => item.type === type && item.id.toLowerCase().includes(query));
+    if (!models.length) continue;
+    const heading = document.createElement('div'); heading.className = 'model-group-title'; heading.textContent = `${title}（${models.length}）`; root.append(heading);
+    for (const model of models) {
+      const button = document.createElement('button'); button.type = 'button'; button.className = `model-option${model.id === state.selectedModel ? ' active' : ''}`;
+      button.disabled = type !== 'chat';
+      const name = document.createElement('span'); name.textContent = model.id;
+      const detail = document.createElement('small'); detail.textContent = type !== 'chat' ? '不支持文字聊天' : model.id === state.selectedModel ? '当前选择 ✓' : '选择';
+      button.append(name, detail);
+      if (!button.disabled) button.addEventListener('click', () => {
+        state.selectedModel = model.id; $('#modelChip').textContent = model.id;
+        try { localStorage.setItem('fengyue.chat.model', model.id); } catch (_) { /* Optional preference. */ }
+        renderModelList(); $('#modelDialog').close(); toast(`已选择 ${model.id}`);
+      });
+      root.append(button);
+    }
+  }
+  if (!root.children.length) { const empty = document.createElement('p'); empty.textContent = '没有匹配的模型'; root.append(empty); }
+}
+function setModels(data) {
+  state.models = data.models || [];
+  let saved; try { saved = localStorage.getItem('fengyue.chat.model'); } catch (_) { /* Optional preference. */ }
+  state.selectedModel = state.models.some(item => item.id === saved && item.type === 'chat') ? saved : data.defaultModel;
+  $('#modelChip').textContent = state.selectedModel;
+  $('#modelListNote').textContent = `共 ${state.models.length} 个模型；图像和音频模型仅显示在列表中。`;
+  renderModelList();
 }
 function authDialog(mode = 'login') {
   state.authMode = mode;
@@ -153,7 +185,7 @@ async function sendMessage() {
     renderMessages([...previous,
       { id: 'pending-user', role: 'user', content: message, createdAt: new Date().toISOString() },
       { id: 'pending-assistant', role: 'assistant', content: '正在续写故事…', createdAt: new Date().toISOString() }]);
-    const sent = await api(`/api/conversations/${encodeURIComponent(state.conversationId)}/messages`, { method: 'POST', body: JSON.stringify({ message }) });
+    const sent = await api(`/api/conversations/${encodeURIComponent(state.conversationId)}/messages`, { method: 'POST', body: JSON.stringify({ message, model: state.selectedModel }) });
     state.chatError = ''; input.value = ''; updateCount();
     renderMessages([...previous, ...sent.messages]);
     try {
@@ -175,10 +207,11 @@ function renderQuickReplies() {
 }
 async function init() {
   try {
-    const [itemData, meData, config] = await Promise.all([
-      api(`/api/items/${encodeURIComponent(storyId)}`), api('/api/me'), api('/api/chat/config')
+    const [itemData, meData, config, models] = await Promise.all([
+      api(`/api/items/${encodeURIComponent(storyId)}`), api('/api/me'), api('/api/chat/config'), api('/api/chat/models')
     ]);
     state.item = itemData.item; document.title = `${state.item.title} - AI风月`;
+    $('.tts-preview-link').href = `/tts?return=${encodeURIComponent(location.pathname)}`;
     $('.chat-main').dataset.theme = /^(rose|violet|blue|mint|amber|peach|indigo|purple|cyan|plum|sky|coral)$/.test(state.item.theme) ? state.item.theme : 'rose';
     $('#storyTitle').textContent = state.item.title; $('#storySummary').textContent = state.item.summary;
     $('#introTitle').textContent = `✿　${state.item.title}　✿`; $('#backgroundText').textContent = state.item.summary;
@@ -189,7 +222,7 @@ async function init() {
     }
     renderQuickReplies();
     ChatTts.init().catch(() => { $('#ttsStatus').textContent = '音色列表暂不可用'; });
-    setConfig(config); setUser(meData.user); await loadConversations();
+    setConfig(config); setModels(models); setUser(meData.user); await loadConversations();
     const selected = new URLSearchParams(location.search).get('conversation');
     if (selected && state.conversations.some(c => c.id === selected)) await openConversation(selected);
   } catch (error) { showInfo('页面加载失败', error.message); }
@@ -209,7 +242,7 @@ $('#messages').addEventListener('click', async event => {
     if (button.dataset.messageAction === 'copy') { await navigator.clipboard.writeText(message.content); toast('已复制消息'); return; }
     if (button.dataset.messageAction === 'edit') { ChatTts.stop(); state.editingMessageId = message.id; $('#editMessageInput').value = message.content; $('#editMessageDialog').showModal(); return; }
     if (button.dataset.messageAction === 'delete') { if (!confirm('删除这条消息？')) return; ChatTts.stop(); const data = await api(`${base}/messages/${encodeURIComponent(message.id)}`, { method: 'DELETE' }); renderMessages(data.messages); await loadConversations(); toast('消息已删除'); return; }
-    if (button.dataset.messageAction === 'regenerate') { ChatTts.stop(); button.disabled = true; const data = await api(`${base}/regenerate`, { method: 'POST' }); renderMessages(data.messages); await loadConversations(); toast('已重新生成回复'); }
+    if (button.dataset.messageAction === 'regenerate') { ChatTts.stop(); button.disabled = true; const data = await api(`${base}/regenerate`, { method: 'POST', body: JSON.stringify({ model: state.selectedModel }) }); renderMessages(data.messages); await loadConversations(); toast('已重新生成回复'); }
   } catch (error) { toast(error.message); button.disabled = false; }
 });
 $('#editMessageForm').addEventListener('submit', async event => {
@@ -245,7 +278,8 @@ document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEve
 $('#detailsButton').addEventListener('click', () => showInfo(state.item?.title || '作品详情', state.item?.summary || ''));
 $('#storyInfoButton').addEventListener('click', () => showInfo(state.item?.title || '作品详情', state.item?.summary || ''));
 $('#archivesButton').addEventListener('click', () => showInfo('热门存档', '每个账号的会话都显示在左侧列表中。点击“新对话”可创建另一条故事线。'));
-$('#settingsButton').addEventListener('click', () => showInfo('模型设置', state.config?.mode === 'model' ? `当前模型：${state.config.model}。模型服务由本地 Spring Boot 后端调用。` : '当前为本地演示模式。设置服务器环境变量 AI_API_KEY 后重启服务即可连接兼容聊天接口；可选 AI_MODEL 和 AI_API_URL。'));
+$('#settingsButton').addEventListener('click', () => $('#modelDialog').showModal());
+$('#modelSearch').addEventListener('input', renderModelList);
 $('#scrollBottomButton').addEventListener('click', () => $('#chatScroll').scrollTo({ top: $('#chatScroll').scrollHeight, behavior: 'smooth' }));
 $('#exportChatButton').addEventListener('click', () => {
   if (!state.conversationId) return toast('请先选择一个会话');

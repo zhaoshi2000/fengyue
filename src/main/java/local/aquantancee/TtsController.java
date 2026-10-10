@@ -35,4 +35,11 @@ public class TtsController {
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/mpeg"))
             .cacheControl(CacheControl.noStore()).body(audio);
     }
+
+    @PostMapping(value = "/preview", produces = "audio/mpeg")
+    public ResponseEntity<byte[]> preview(@RequestBody Map<String, Object> body) {
+        byte[] audio = speech.preview(AuthService.text(body, "text"), AuthService.text(body, "voice"));
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/mpeg"))
+            .cacheControl(CacheControl.noStore()).body(audio);
+    }
 }

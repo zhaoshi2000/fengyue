@@ -1,5 +1,6 @@
 const ChatTts = (() => {
   const voiceSelect = document.querySelector('#ttsVoiceSelect');
+  const languageSelect = document.querySelector('#ttsLanguageSelect');
   const stopButton = document.querySelector('#ttsStopButton');
   const status = document.querySelector('#ttsStatus');
   const cache = new Map();
@@ -7,6 +8,25 @@ const ChatTts = (() => {
   let controller = null;
   let activeMessageId = null;
   let requestNumber = 0;
+  let voices = [];
+
+  function languageOf(voice) { return voice.locale?.split('-')[0] || 'other'; }
+  function languageName(code) {
+    try { return new Intl.DisplayNames(['zh-CN'], { type: 'language' }).of(code) || code; }
+    catch (_) { return code; }
+  }
+
+  function renderVoiceOptions(preferred) {
+    const choices = voices.filter(voice => languageSelect.value === '*' || languageOf(voice) === languageSelect.value);
+    voiceSelect.replaceChildren();
+    for (const voice of choices) {
+      const option = document.createElement('option');
+      option.value = voice.id; option.textContent = `${voice.locale} · ${voice.label}`; voiceSelect.append(option);
+    }
+    voiceSelect.value = choices.some(voice => voice.id === preferred) ? preferred : choices[0]?.id || '';
+    voiceSelect.disabled = !choices.length;
+    try { localStorage.setItem('fengyue.tts.voice', voiceSelect.value); } catch (_) { /* Optional preference. */ }
+  }
 
   function refresh() {
     for (const button of document.querySelectorAll('[data-message-action="speak"]')) {
@@ -51,15 +71,21 @@ const ChatTts = (() => {
     const response = await fetch('/api/tts/voices', { credentials: 'same-origin' });
     if (!response.ok) throw new Error('音色列表加载失败');
     const data = await response.json();
-    voiceSelect.replaceChildren();
-    for (const voice of data.voices) {
-      const option = document.createElement('option');
-      option.value = voice.id; option.textContent = voice.label; voiceSelect.append(option);
-    }
+    voices = data.voices || [];
+    const counts = new Map();
+    for (const voice of voices) counts.set(languageOf(voice), (counts.get(languageOf(voice)) || 0) + 1);
+    languageSelect.replaceChildren();
+    const option = (value, label) => { const node = document.createElement('option'); node.value = value; node.textContent = label; languageSelect.append(node); };
+    if (counts.has('zh')) option('zh', `中文（${counts.get('zh')}）`);
+    option('*', `全部语言（${voices.length}）`);
+    for (const code of [...counts.keys()].filter(code => code !== 'zh').sort((a, b) => languageName(a).localeCompare(languageName(b), 'zh-CN')))
+      option(code, `${languageName(code)}（${counts.get(code)}）`);
     let saved;
     try { saved = localStorage.getItem('fengyue.tts.voice'); } catch (_) { /* Private browsing may disable storage. */ }
-    voiceSelect.value = data.voices.some(voice => voice.id === saved) ? saved : data.defaultVoice;
-    voiceSelect.disabled = false;
+    const selected = voices.find(voice => voice.id === saved) || voices.find(voice => voice.id === data.defaultVoice) || voices[0];
+    if (selected && languageOf(selected) !== 'zh') languageSelect.value = languageOf(selected);
+    renderVoiceOptions(selected?.id);
+    languageSelect.disabled = false;
   }
 
   async function toggle(conversationId, message) {
@@ -123,6 +149,7 @@ const ChatTts = (() => {
     stop();
     try { localStorage.setItem('fengyue.tts.voice', voiceSelect.value); } catch (_) { /* Optional preference. */ }
   });
+  languageSelect.addEventListener('change', () => { stop(); renderVoiceOptions(voiceSelect.value); });
   stopButton.addEventListener('click', stop);
   window.addEventListener('beforeunload', clearCache);
   return { init, toggle, stop, clearCache, refresh };

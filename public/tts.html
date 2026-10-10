@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edge 音色试听 · 风月</title>
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/tts.css">
+  <script src="/tts.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/">风月<span>AI</span></a><nav><a href="/">探索作品</a><button id="backButton" type="button">返回聊天</button></nav></header>
+  <main>
+    <section class="hero"><p class="eyebrow">EDGE TTS · VOICE STUDIO</p><h1>为故事选一个声音</h1><p>选择语种与音色，输入一小段文字，即可试听。当前音色列表由 Edge TTS 在线获取。</p><div class="count" id="voiceCount">正在加载音色…</div></section>
+    <section class="studio" aria-label="语音试听设置">
+      <div class="filters"><label>语种<select id="languageFilter" disabled><option>加载中…</option></select></label><label>搜索音色<input id="voiceSearch" type="search" placeholder="名称、编号或地区" autocomplete="off"></label></div>
+      <label class="sample-label" for="sampleText">试听文字</label><textarea id="sampleText" maxlength="200" rows="3">你好，欢迎来到风月。让我们一起走进今天的故事。</textarea>
+      <div class="player-row"><span id="selectedVoice">请选择音色</span><button id="playSelected" type="button" disabled>▶ 试听选中音色</button><button id="stopPlayback" type="button" hidden>■ 停止</button></div>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="results"><div class="section-heading"><h2>音色列表</h2><span id="visibleCount"></span></div><div class="voice-grid" id="voiceGrid"></div></section>
+  </main>
+</body>
+</html>

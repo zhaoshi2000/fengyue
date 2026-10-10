@@ -21,17 +21,19 @@ import org.springframework.web.client.ResourceAccessException;
 public class ConversationService {
     private final JdbcTemplate jdbc;
     private final CardService cards;
+    private final ModelCatalogService modelCatalog;
     private final String apiKey;
     private final String apiUrl;
     private final String model;
     private final RestClient client;
 
-    public ConversationService(JdbcTemplate jdbc, CardService cards,
+    public ConversationService(JdbcTemplate jdbc, CardService cards, ModelCatalogService modelCatalog,
             @Value("${AI_API_KEY:}") String apiKey,
             @Value("${AI_API_URL:https://api.deepseek.com/chat/completions}") String apiUrl,
             @Value("${AI_MODEL:deepseek-flash}") String model) {
         this.jdbc = jdbc;
         this.cards = cards;
+        this.modelCatalog = modelCatalog;
         this.apiKey = apiKey.trim();
         this.apiUrl = apiUrl.trim();
         this.model = model.trim();
@@ -44,6 +46,8 @@ public class ConversationService {
     public Map<String, Object> config() {
         return Map.of("mode", apiKey.isEmpty() ? "demo" : "model", "model", apiKey.isEmpty() ? "本地演示" : model);
     }
+
+    public Map<String, Object> models() { return modelCatalog.models(); }
 
     private record Conversation(String id, String userId, String itemId, String title, String itemTitle, String summary,
                                 LocalDateTime createdAt, LocalDateTime updatedAt) {}
@@ -130,7 +134,7 @@ public class ConversationService {
                 (rs, row) -> Map.of("role", rs.getString("role"), "content", rs.getString("content")), id);
         java.util.Collections.reverse(prior);
         Reply generated = apiKey.isEmpty() ? new Reply(demoReply(c, message, prior.size(), false), "本地演示", null, null, null)
-                : modelReply(c, message, prior);
+                : modelReply(c, message, prior, modelCatalog.selectedChatModel(AuthService.text(body, "model")));
         String reply = generated.content();
         if (reply.length() > 8000) reply = reply.substring(0, 8000);
         LocalDateTime now = LocalDateTime.now();
@@ -156,7 +160,7 @@ public class ConversationService {
     }
 
     @SuppressWarnings("unchecked")
-    private Reply modelReply(Conversation c, String message, List<Map<String, Object>> prior) {
+    private Reply modelReply(Conversation c, String message, List<Map<String, Object>> prior, String selectedModel) {
         List<Map<String, Object>> messages = new ArrayList<>();
         Map<String, Object> card = cards.get(c.itemId());
         String worldContext = worldContext(card, message, prior);
@@ -169,14 +173,14 @@ public class ConversationService {
         messages.add(Map.of("role", "user", "content", message));
         try {
             Map<String, Object> result = client.post().uri(apiUrl).header("Authorization", "Bearer " + apiKey)
-                .body(Map.of("model", model, "messages", messages, "stream", false))
+                .body(Map.of("model", selectedModel, "messages", messages, "stream", false))
                 .retrieve().body(Map.class);
             if (result != null && result.get("choices") instanceof List<?> choices && !choices.isEmpty()
                     && choices.getFirst() instanceof Map<?, ?> choice
                     && choice.get("message") instanceof Map<?, ?> response
                     && response.get("content") instanceof String content && !content.isBlank()) {
                 Map<?, ?> usage = result.get("usage") instanceof Map<?, ?> values ? values : Map.of();
-                String returnedModel = result.get("model") instanceof String value && !value.isBlank() ? value : model;
+                String returnedModel = result.get("model") instanceof String value && !value.isBlank() ? value : selectedModel;
                 return new Reply(content.trim(), returnedModel.substring(0, Math.min(returnedModel.length(), 100)),
                     tokens(usage.get("prompt_tokens")), tokens(usage.get("completion_tokens")), tokens(usage.get("total_tokens")));
             }
@@ -274,7 +278,7 @@ public class ConversationService {
     }
 
     @Transactional
-    public Map<String, Object> regenerate(String conversationId, AuthService.User user) {
+    public Map<String, Object> regenerate(String conversationId, Map<String, Object> body, AuthService.User user) {
         Conversation c = owned(conversationId, user);
         List<Map<String, Object>> assistant = jdbc.query("SELECT id,content,created_at FROM conversation_messages WHERE conversation_id=? AND role='assistant' ORDER BY created_at DESC,id DESC LIMIT 1",
             (rs, row) -> Map.of("id", rs.getString("id"), "content", rs.getString("content"), "createdAt", rs.getObject("created_at", LocalDateTime.class)), conversationId);
@@ -289,7 +293,7 @@ public class ConversationService {
         java.util.Collections.reverse(prior);
         String message = String.valueOf(latestUser.getFirst().get("content"));
         Reply generated = apiKey.isEmpty() ? new Reply(demoReply(c, message, prior.size(), true), "本地演示", null, null, null)
-                : modelReply(c, message, prior);
+                : modelReply(c, message, prior, modelCatalog.selectedChatModel(AuthService.text(body, "model")));
         String reply = generated.content();
         if (reply.length() > 8000) reply = reply.substring(0, 8000);
         jdbc.update("UPDATE conversation_messages SET content=? WHERE id=? AND conversation_id=?", reply, assistant.getFirst().get("id"), conversationId);

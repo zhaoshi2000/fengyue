@@ -85,6 +85,7 @@ public class ApiController {
         return ResponseEntity.status(HttpStatus.CREATED).body(stories.chat(id, body, auth.current(request)));
     }
     @GetMapping("/chat/config") public Map<String, Object> chatConfig() { return conversations.config(); }
+    @GetMapping("/chat/models") public Map<String, Object> chatModels() { return conversations.models(); }
     @GetMapping("/items/{id}/conversations") public Map<String, Object> conversations(@PathVariable String id, HttpServletRequest request) {
         return conversations.list(id, auth.require(request));
     }
@@ -119,7 +120,8 @@ public class ApiController {
             @PathVariable String messageId, HttpServletRequest request) {
         return conversations.deleteMessage(id, messageId, auth.require(request));
     }
-    @PostMapping("/conversations/{id}/regenerate") public Map<String, Object> regenerate(@PathVariable String id, HttpServletRequest request) {
-        return conversations.regenerate(id, auth.require(request));
+    @PostMapping("/conversations/{id}/regenerate") public Map<String, Object> regenerate(@PathVariable String id,
+            @RequestBody(required = false) Map<String, Object> body, HttpServletRequest request) {
+        return conversations.regenerate(id, body == null ? Map.of() : body, auth.require(request));
     }
 }
